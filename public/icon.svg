@@ -1,0 +1,20 @@
+<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+  <!-- Green background -->
+  <rect width="180" height="180" rx="37" fill="#22c55e"/>
+  
+  <!-- Sprout Icon -->
+  <g transform="translate(90, 95)">
+    <!-- Left leaf -->
+    <ellipse cx="-22" cy="-18" rx="18" ry="22" fill="white" opacity="0.95" transform="rotate(-25 -22 -18)"/>
+    <!-- Right leaf -->
+    <ellipse cx="22" cy="-18" rx="18" ry="22" fill="white" opacity="0.95" transform="rotate(25 22 -18)"/>
+    <!-- Center small leaf -->
+    <ellipse cx="0" cy="-15" rx="9" ry="12" fill="white"/>
+    <!-- Stem -->
+    <line x1="0" y1="-3" x2="0" y2="28" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    <!-- Root left -->
+    <line x1="0" y1="28" x2="-9" y2="36" stroke="white" stroke-width="7" stroke-linecap="round"/>
+    <!-- Root right -->
+    <line x1="0" y1="28" x2="9" y2="36" stroke="white" stroke-width="7" stroke-linecap="round"/>
+  </g>
+</svg>

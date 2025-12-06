@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: barofarm-frontend
+    restart: unless-stopped
+    
+    # 방법 1: host 네트워크 모드 (localhost로 백엔드 접근 가능)
+    network_mode: host
+    
+    # 방법 2: bridge 모드 사용 시 (아래 주석 해제)
+    # ports:
+    #   - "3000:3000"
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+    
+    environment:
+      - NODE_ENV=production
+      # host 네트워크 모드: localhost 사용
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost
+      - NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8081
+      - NEXT_PUBLIC_BUYER_SERVICE_URL=http://localhost:8082
+      - NEXT_PUBLIC_CART_SERVICE_URL=http://localhost:8082
+      - NEXT_PUBLIC_PRODUCT_SERVICE_URL=http://localhost:8082
+      - NEXT_PUBLIC_SELLER_SERVICE_URL=http://localhost:8085
+      - NEXT_PUBLIC_FARM_SERVICE_URL=http://localhost:8085
+      - NEXT_PUBLIC_ORDER_SERVICE_URL=http://localhost:8087
+      - NEXT_PUBLIC_PAYMENT_SERVICE_URL=http://localhost:8087
+      - NEXT_PUBLIC_SETTLEMENT_SERVICE_URL=http://localhost:8089
+      - NEXT_PUBLIC_DELIVERY_SERVICE_URL=http://localhost:8089
+      - NEXT_PUBLIC_NOTIFICATION_SERVICE_URL=http://localhost:8089
+      - NEXT_PUBLIC_EXPERIENCE_SERVICE_URL=http://localhost:8089
+      - NEXT_PUBLIC_SEARCH_SERVICE_URL=http://localhost:8089
+      - NEXT_PUBLIC_REVIEW_SERVICE_URL=http://localhost:8089
+
