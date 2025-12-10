@@ -36,5 +36,3 @@ export const API_URLS = {
 } as const
 
 export type ServiceName = keyof typeof API_URLS
-
-

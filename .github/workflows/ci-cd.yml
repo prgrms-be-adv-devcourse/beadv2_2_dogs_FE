@@ -18,7 +18,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: do-develop-space  # 개인 GitHub 계정
+  IMAGE_NAME: do-develop-space # 개인 GitHub 계정
   SERVICE_NAME: barofarm-frontend
 
 jobs:
@@ -28,26 +28,26 @@ jobs:
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: '9'
-      
+
       - name: Get pnpm store directory
         shell: bash
         run: |
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-      
+
       - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
@@ -55,21 +55,21 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
-      
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
+
       - name: Code formatting check (Prettier)
         run: pnpm format:check
-      
+
       - name: Lint check (ESLint)
         run: pnpm lint
-      
+
       - name: Build with Next.js
         run: pnpm build
         env:
           NODE_ENV: production
-      
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -89,33 +89,33 @@ jobs:
     name: Build Docker Images
     runs-on: ubuntu-latest
     needs: build-and-test
-    timeout-minutes: 30  # Docker 빌드 타임아웃 설정
+    timeout-minutes: 30 # Docker 빌드 타임아웃 설정
     # data, infra 브랜치는 Docker 빌드 건너뛰기 (인프라만 배포)
     if: |
       github.event_name == 'push' && 
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/main-')) &&
       !contains(github.ref, 'main-data') && 
       !contains(github.ref, 'main-infra')
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: do-develop-space  # 개인 계정
+          username: do-develop-space # 개인 계정
           password: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
-      
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -128,7 +128,7 @@ jobs:
             type=raw,value={{branch}}-{{date 'YYYYMMDD-HHmmss'}}
           flavor: |
             latest=true
-      
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -139,13 +139,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:buildcache,mode=max
-      
+
       - name: Make package public
         if: success()
         run: |
           PACKAGE_NAME="${{ env.SERVICE_NAME }}"
           echo "Making package ${PACKAGE_NAME} public..."
-          
+
           # GitHub API를 사용하여 패키지 visibility를 public으로 변경
           curl -X PATCH \
             -H "Accept: application/vnd.github+json" \
@@ -153,7 +153,7 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/user/packages/container/${PACKAGE_NAME} \
             -d '{"visibility":"public"}' || echo "Failed to make package public (may already be public or require manual setup)"
-          
+
           echo "✅ Package ${PACKAGE_NAME} visibility set to public"
 
   # ==================================================
@@ -162,39 +162,39 @@ jobs:
   deploy:
     name: Deploy Frontend to AWS EC2
     runs-on: ubuntu-latest
-    needs: build-and-test  # docker-build가 건너뛰어질 수 있으므로 build-and-test에만 의존
+    needs: build-and-test # docker-build가 건너뛰어질 수 있으므로 build-and-test에만 의존
     if: startsWith(github.ref, 'refs/heads/main-')
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Extract branch name
         id: branch
         run: |
           BRANCH=$(echo ${GITHUB_REF#refs/heads/} | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
           echo "name=$BRANCH" >> $GITHUB_OUTPUT
           echo "Deploying from branch: $BRANCH"
-      
+
       - name: Deploy to EC2
         env:
           PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           HOST: ${{ secrets.EC2_HOST }}
           USER: ${{ secrets.EC2_USERNAME }}
-        timeout-minutes: 10  # 배포 타임아웃 설정
+        timeout-minutes: 10 # 배포 타임아웃 설정
         run: |
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
-          
+
           # SSH 연결 옵션 (안정성 개선)
           SSH_OPTS="-i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o ConnectTimeout=10 -o TCPKeepAlive=yes"
-          
+
           # SSH 연결 테스트 (재시도 로직)
           echo "Testing SSH connection to ${USER}@${HOST}..."
           MAX_RETRIES=3
           RETRY_COUNT=0
           SSH_CONNECTED=false
-          
+
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             if ssh $SSH_OPTS -o ConnectTimeout=10 ${USER}@${HOST} "echo 'SSH connection successful'" 2>/dev/null; then
               SSH_CONNECTED=true
@@ -205,7 +205,7 @@ jobs:
               sleep 5
             fi
           done
-          
+
           if [ "$SSH_CONNECTED" = false ]; then
             echo "❌ Failed to connect to EC2 after $MAX_RETRIES attempts"
             echo "💡 Please check:"
@@ -215,53 +215,53 @@ jobs:
             rm -f private_key.pem
             exit 1
           fi
-          
+
           echo "✅ SSH connection established"
-          
+
           # EC2에 배포 디렉토리 생성
           ssh $SSH_OPTS ${USER}@${HOST} "mkdir -p /home/${USER}/apps/FE"
-          
+
           # EC2에 배포 스크립트 및 docker-compose 파일들 복사
           scp $SSH_OPTS \
             ./scripts/deploy-frontend.sh ${USER}@${HOST}:/home/${USER}/
-          
+
           scp $SSH_OPTS \
             ./docker-compose.yml ${USER}@${HOST}:/home/${USER}/apps/FE/
-          
+
           scp $SSH_OPTS \
             ./Dockerfile ${USER}@${HOST}:/home/${USER}/apps/FE/
-          
+
           # GHCR_PAT 또는 GITHUB_TOKEN 사용 (GHCR_PAT 우선)
           if [ -n "${{ secrets.GHCR_PAT }}" ]; then
             GHCR_TOKEN="${{ secrets.GHCR_PAT }}"
           else
             GHCR_TOKEN="${{ secrets.GITHUB_TOKEN }}"
           fi
-          
+
           # 브랜치명 기반 이미지 태그 결정
           BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
           IMAGE_TAG="${BRANCH_NAME}"
-          
+
           # 배포 스크립트를 백그라운드로 실행하고 로그 파일에 저장
           echo "🚀 Starting deployment in background..."
           DEPLOY_LOG="/home/${USER}/apps/FE/deploy-frontend-$(date +%Y%m%d-%H%M%S).log"
-          
+
           ssh $SSH_OPTS ${USER}@${HOST} \
             "cd /home/${USER}/apps/FE && \
              nohup bash -c 'GITHUB_TOKEN=${GHCR_TOKEN} GITHUB_REF=${{ github.ref }} REGISTRY=${{ env.REGISTRY }} IMAGE_NAME=${{ env.IMAGE_NAME }} SERVICE_NAME=${{ env.SERVICE_NAME }} bash /home/${USER}/deploy-frontend.sh' > ${DEPLOY_LOG} 2>&1 & \
              echo \$! > /tmp/deploy-frontend.pid"
-          
+
           echo "⏳ Deployment started in background. PID saved to /tmp/deploy-frontend.pid"
           echo "📝 Log file: ${DEPLOY_LOG}"
           echo "⏳ Waiting 10 seconds for initial deployment steps..."
           sleep 10
-          
+
           # 배포 진행 상황 확인 (최대 5분 대기)
           echo "📊 Monitoring deployment progress..."
           MAX_WAIT=300  # 5분
           ELAPSED=0
           INTERVAL=10   # 10초마다 확인
-          
+
           while [ $ELAPSED -lt $MAX_WAIT ]; do
             # 배포 프로세스가 실행 중인지 확인
             if ssh $SSH_OPTS ${USER}@${HOST} "test -f /tmp/deploy-frontend.pid && ps -p \$(cat /tmp/deploy-frontend.pid) > /dev/null 2>&1"; then
@@ -318,7 +318,7 @@ jobs:
               fi
             fi
           done
-          
+
           # 타임아웃 발생
           echo "⏱️ Deployment timeout after ${MAX_WAIT} seconds"
           echo "📝 Fetching recent log entries..."
@@ -329,7 +329,7 @@ jobs:
           echo ""
           echo "🔍 Checking recent container logs (if exists)..."
           ssh $SSH_OPTS ${USER}@${HOST} "docker logs ${SERVICE_NAME} --tail 30 2>&1 || echo 'Container logs not available'" || echo "Could not fetch container logs"
-          
+
           # 컨테이너 상태 확인
           if ssh $SSH_OPTS ${USER}@${HOST} "docker ps | grep -q ${SERVICE_NAME}"; then
             echo "✅ Container is running despite timeout. Deployment may have succeeded."
@@ -341,7 +341,7 @@ jobs:
             rm -f private_key.pem
             exit 1
           fi
-      
+
       - name: Notify deployment status
         if: always()
         env:
@@ -375,8 +375,8 @@ jobs:
     if: success()
     permissions:
       contents: read
-      packages: write  # 패키지 삭제 권한 필요
-    
+      packages: write # 패키지 삭제 권한 필요
+
     steps:
       - name: Delete old container images
         uses: actions/delete-package-versions@v4
@@ -385,9 +385,10 @@ jobs:
           package-type: 'container'
           min-versions-to-keep: 5
           delete-only-untagged-versions: 'false'
-        continue-on-error: true  # 패키지가 없어도 실패하지 않도록
+        continue-on-error: true # 패키지가 없어도 실패하지 않도록
         env:
-          GITHUB_TOKEN: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}  # 명시적으로 토큰 전달
+          GITHUB_TOKEN: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }} # 명시적으로 토큰 전달
+
 
   # ==================================================
   # Notification (선택사항)
@@ -397,7 +398,7 @@ jobs:
   #   runs-on: ubuntu-latest
   #   needs: [build-and-test, docker-build, deploy]
   #   if: always()
-  #   
+  #
   #   steps:
   #     - name: Send Slack notification
   #       uses: 8398a7/action-slack@v3

@@ -60,5 +60,3 @@ export const experienceService = {
     return experienceApi.post<ExperienceBooking>(`/api/bookings/${id}/cancel`, { reason })
   },
 }
-
-

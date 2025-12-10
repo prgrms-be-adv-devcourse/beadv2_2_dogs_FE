@@ -228,12 +228,13 @@ export default function ExperiencesPage() {
         <div className="container mx-auto px-4">
           <div className="mb-6 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              총 <span className="font-semibold text-foreground">{filteredAndSortedExperiences.length}</span>개의
-              체험 프로그램
+              총{' '}
+              <span className="font-semibold text-foreground">
+                {filteredAndSortedExperiences.length}
+              </span>
+              개의 체험 프로그램
               {hasActiveFilters && (
-                <span className="ml-2 text-xs">
-                  (전체 {experiences.length}개 중)
-                </span>
+                <span className="ml-2 text-xs">(전체 {experiences.length}개 중)</span>
               )}
             </p>
             {hasActiveFilters && (
@@ -253,9 +254,7 @@ export default function ExperiencesPage() {
             <div className="text-center py-16">
               <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">검색 결과가 없습니다</h3>
-              <p className="text-muted-foreground mb-4">
-                다른 검색어나 필터를 시도해보세요
-              </p>
+              <p className="text-muted-foreground mb-4">다른 검색어나 필터를 시도해보세요</p>
               <Button variant="outline" onClick={clearFilters}>
                 필터 초기화
               </Button>
@@ -263,48 +262,48 @@ export default function ExperiencesPage() {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredAndSortedExperiences.map((exp, index) => (
-              <Card
-                key={exp.id}
-                className="overflow-hidden group hover:shadow-lg transition-shadow"
-              >
-                <Link href={`/experiences/${exp.id}`}>
-                  <div className="relative h-48 overflow-hidden bg-muted">
-                    <Image
-                      src={exp.image || '/placeholder.svg'}
-                      alt={exp.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform"
-                      priority={index === 0}
-                    />
-                    <Badge className="absolute top-3 left-3">{exp.tag}</Badge>
-                  </div>
-                  <div className="p-5">
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
-                      <MapPin className="h-3 w-3" />
-                      <span>{exp.farm}</span>
-                      <span className="mx-1">•</span>
-                      <span>{exp.location}</span>
+                <Card
+                  key={exp.id}
+                  className="overflow-hidden group hover:shadow-lg transition-shadow"
+                >
+                  <Link href={`/experiences/${exp.id}`}>
+                    <div className="relative h-48 overflow-hidden bg-muted">
+                      <Image
+                        src={exp.image || '/placeholder.svg'}
+                        alt={exp.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform"
+                        priority={index === 0}
+                      />
+                      <Badge className="absolute top-3 left-3">{exp.tag}</Badge>
                     </div>
-                    <h3 className="text-lg font-semibold mb-3">{exp.title}</h3>
-                    <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground mb-4">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        <span>{exp.duration}</span>
+                    <div className="p-5">
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                        <MapPin className="h-3 w-3" />
+                        <span>{exp.farm}</span>
+                        <span className="mx-1">•</span>
+                        <span>{exp.location}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        <span>{exp.capacity}</span>
+                      <h3 className="text-lg font-semibold mb-3">{exp.title}</h3>
+                      <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground mb-4">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          <span>{exp.duration}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Users className="h-4 w-4" />
+                          <span>{exp.capacity}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-xl font-bold text-primary">
+                          {exp.price.toLocaleString()}원
+                        </div>
+                        <div className="text-sm text-muted-foreground">1인 기준</div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="text-xl font-bold text-primary">
-                        {exp.price.toLocaleString()}원
-                      </div>
-                      <div className="text-sm text-muted-foreground">1인 기준</div>
-                    </div>
-                  </div>
-                </Link>
-              </Card>
+                  </Link>
+                </Card>
               ))}
             </div>
           )}

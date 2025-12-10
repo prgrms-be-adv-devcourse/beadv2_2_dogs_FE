@@ -32,5 +32,3 @@ export const cartService = {
     return cartApi.post('/api/cart/items/delete', { itemIds })
   },
 }
-
-

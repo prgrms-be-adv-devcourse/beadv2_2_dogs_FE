@@ -24,5 +24,3 @@ export const farmService = {
     return farmApi.get<Farm[]>('/api/farms/nearby', { params: { lat, lng, radius } })
   },
 }
-
-

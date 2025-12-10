@@ -133,7 +133,8 @@ export default function FarmDetailPage({ params }: { params: { id: string } }) {
       author: '김**',
       rating: 5,
       date: '2024.12.01',
-      content: '정말 신뢰할 수 있는 농장입니다. 상품도 신선하고 배송도 빠르네요. 계속 주문할 예정입니다!',
+      content:
+        '정말 신뢰할 수 있는 농장입니다. 상품도 신선하고 배송도 빠르네요. 계속 주문할 예정입니다!',
       helpful: 24,
     },
     {
@@ -149,7 +150,8 @@ export default function FarmDetailPage({ params }: { params: { id: string } }) {
       author: '박**',
       rating: 4,
       date: '2024.11.25',
-      content: '유기농 인증도 받아서 믿을 수 있고, 상품 품질도 좋습니다. 다만 배송비가 조금 부담스러워요.',
+      content:
+        '유기농 인증도 받아서 믿을 수 있고, 상품 품질도 좋습니다. 다만 배송비가 조금 부담스러워요.',
       helpful: 12,
     },
   ]
@@ -210,7 +212,12 @@ export default function FarmDetailPage({ params }: { params: { id: string } }) {
                         : 'border-transparent hover:border-muted-foreground/50'
                     }`}
                   >
-                    <Image src={image} alt={`${farm.name} ${index + 1}`} fill className="object-cover" />
+                    <Image
+                      src={image}
+                      alt={`${farm.name} ${index + 1}`}
+                      fill
+                      className="object-cover"
+                    />
                   </button>
                 ))}
               </div>
@@ -248,7 +255,8 @@ export default function FarmDetailPage({ params }: { params: { id: string } }) {
                 </div>
                 <div className="h-4 w-px bg-border" />
                 <div className="text-sm text-muted-foreground">
-                  체험 프로그램 <span className="font-semibold text-foreground">{farm.experiences}개</span>
+                  체험 프로그램{' '}
+                  <span className="font-semibold text-foreground">{farm.experiences}개</span>
                 </div>
               </div>
 
@@ -360,7 +368,9 @@ export default function FarmDetailPage({ params }: { params: { id: string } }) {
                         <span className="text-sm text-muted-foreground">({product.reviews})</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold">{product.price.toLocaleString()}원</span>
+                        <span className="text-lg font-bold">
+                          {product.price.toLocaleString()}원
+                        </span>
                         <span className="text-sm text-muted-foreground line-through">
                           {product.originalPrice.toLocaleString()}원
                         </span>
@@ -414,7 +424,9 @@ export default function FarmDetailPage({ params }: { params: { id: string } }) {
                         <div className="flex items-center gap-1">
                           <Star className="h-4 w-4 fill-primary text-primary" />
                           <span className="text-sm font-medium">{experience.rating}</span>
-                          <span className="text-sm text-muted-foreground">({experience.reviews})</span>
+                          <span className="text-sm text-muted-foreground">
+                            ({experience.reviews})
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -489,7 +501,9 @@ export default function FarmDetailPage({ params }: { params: { id: string } }) {
                       <div className="flex items-center gap-1">
                         <Star className="h-4 w-4 fill-primary text-primary" />
                         <span className="text-sm font-medium">{relatedFarm.rating}</span>
-                        <span className="text-sm text-muted-foreground">({relatedFarm.reviews})</span>
+                        <span className="text-sm text-muted-foreground">
+                          ({relatedFarm.reviews})
+                        </span>
                       </div>
                     </div>
                   </Link>
@@ -502,4 +516,3 @@ export default function FarmDetailPage({ params }: { params: { id: string } }) {
     </div>
   )
 }
-

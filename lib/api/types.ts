@@ -369,5 +369,3 @@ export interface Settlement {
 }
 
 export type SettlementStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
-
-

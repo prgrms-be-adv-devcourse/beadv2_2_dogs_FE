@@ -19,10 +19,7 @@ export const reviewService = {
   },
 
   // 리뷰 수정
-  async updateReview(
-    id: number,
-    data: Partial<CreateReviewRequest>
-  ): Promise<Review> {
+  async updateReview(id: number, data: Partial<CreateReviewRequest>): Promise<Review> {
     return reviewApi.put<Review>(`/api/reviews/${id}`, data)
   },
 
@@ -41,5 +38,3 @@ export const reviewService = {
     return reviewApi.get<PaginatedResponse<Review>>('/api/reviews/my', { params })
   },
 }
-
-

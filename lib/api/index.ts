@@ -41,5 +41,3 @@ export {
   notificationService,
   sellerService,
 } from './services'
-
-

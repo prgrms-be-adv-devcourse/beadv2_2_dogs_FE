@@ -5,12 +5,14 @@
 ## 📦 준비된 기능들
 
 ### 1. 검색 유틸리티 (`lib/utils/search.ts`)
+
 - ✅ **디바운싱**: API 호출 최적화를 위한 디바운스 함수
 - ✅ **검색어 하이라이트**: 검색 결과에서 키워드 강조
 - ✅ **검색어 정규화**: 공백 제거, 소문자 변환
 - ✅ **검색어 유효성 검사**: 최소 길이 검증
 
 ### 2. 검색 훅 (`hooks/use-search.ts`)
+
 - ✅ **자동완성**: `getSuggestions` API 연동 준비
 - ✅ **인기 검색어**: `getPopularKeywords` API 연동 준비
 - ✅ **로딩/에러 상태**: API 호출 상태 관리
@@ -18,6 +20,7 @@
 - ✅ **요청 취소**: 이전 요청 자동 취소 (AbortController)
 
 ### 3. 검색 히스토리 (`lib/utils/search-history.ts`)
+
 - ✅ **로컬 스토리지 저장**: 최근 검색어 저장
 - ✅ **중복 제거**: 같은 검색어는 최신으로 업데이트
 - ✅ **최대 개수 제한**: 최대 10개까지 저장
@@ -26,23 +29,27 @@
 ### 4. 검색 컴포넌트
 
 #### `SearchInput`
+
 - 검색 입력 필드
 - 클리어 버튼
 - 포커스 관리
 
 #### `SearchSuggestions`
+
 - 자동완성 추천 검색어
 - 최근 검색어
 - 인기 검색어
 - 개별/전체 삭제 기능
 
 #### `SearchBox`
+
 - 통합 검색 박스 컴포넌트
 - 모든 기능 통합
 - 외부 클릭 감지
 - 키보드 이벤트 처리 (Enter, Escape)
 
 #### `HighlightText`
+
 - 검색어 하이라이트 표시
 
 ## 🚀 사용 방법
@@ -54,14 +61,8 @@ import { SearchInput } from '@/components/search'
 
 function ProductsPage() {
   const [query, setQuery] = useState('')
-  
-  return (
-    <SearchInput
-      value={query}
-      onChange={setQuery}
-      placeholder="상품 검색..."
-    />
-  )
+
+  return <SearchInput value={query} onChange={setQuery} placeholder="상품 검색..." />
 }
 ```
 
@@ -95,26 +96,17 @@ function ProductsPage() {
 import { useSearch } from '@/hooks/use-search'
 
 function CustomSearchComponent() {
-  const {
-    query,
-    suggestions,
-    popularKeywords,
-    isLoading,
-    handleQueryChange,
-    selectSuggestion,
-  } = useSearch({
-    minLength: 2,
-    debounceDelay: 300,
-    enableSuggestions: true,
-    enablePopularKeywords: true,
-  })
+  const { query, suggestions, popularKeywords, isLoading, handleQueryChange, selectSuggestion } =
+    useSearch({
+      minLength: 2,
+      debounceDelay: 300,
+      enableSuggestions: true,
+      enablePopularKeywords: true,
+    })
 
   return (
     <div>
-      <input
-        value={query}
-        onChange={(e) => handleQueryChange(e.target.value)}
-      />
+      <input value={query} onChange={(e) => handleQueryChange(e.target.value)} />
       {suggestions.map((suggestion) => (
         <button key={suggestion} onClick={() => selectSuggestion(suggestion)}>
           {suggestion}
@@ -134,8 +126,8 @@ function CustomSearchComponent() {
 ```typescript
 // lib/api/services/search.ts
 async getSuggestions(keyword: string): Promise<string[]> {
-  return searchApi.get<string[]>('/api/search/suggestions', { 
-    params: { keyword } 
+  return searchApi.get<string[]>('/api/search/suggestions', {
+    params: { keyword }
   })
 }
 ```
@@ -179,15 +171,13 @@ const results = await searchService.search({
 ### 기존 코드를 SearchBox로 변경
 
 **Before:**
+
 ```tsx
-<Input
-  placeholder="검색..."
-  value={searchQuery}
-  onChange={(e) => setSearchQuery(e.target.value)}
-/>
+<Input placeholder="검색..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
 ```
 
 **After:**
+
 ```tsx
 <SearchBox
   placeholder="검색..."
@@ -202,23 +192,22 @@ const results = await searchService.search({
 ## 🎨 커스터마이징
 
 ### 디바운스 시간 조정
+
 ```tsx
 <SearchBox debounceDelay={500} /> // 500ms로 변경
 ```
 
 ### 최소 검색어 길이
+
 ```tsx
 const { hasQuery } = useSearch({ minLength: 2 })
 ```
 
 ### 검색어 하이라이트
+
 ```tsx
 import { HighlightText } from '@/components/search'
-
-<HighlightText 
-  text="유기농 방울토마토" 
-  keyword="토마토" 
-/>
+;<HighlightText text="유기농 방울토마토" keyword="토마토" />
 ```
 
 ## 🔮 향후 확장 가능한 기능
@@ -238,4 +227,3 @@ import { HighlightText } from '@/components/search'
 - `hooks/use-search.ts` - 검색 커스텀 훅
 - `components/search/` - 검색 컴포넌트들
 - `lib/api/services/search.ts` - 검색 API 서비스
-

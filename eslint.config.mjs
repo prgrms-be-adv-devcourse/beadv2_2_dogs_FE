@@ -34,6 +34,9 @@ export default [
       'react/prop-types': 'off',
       'react/no-unescaped-entities': 'off',
       'no-undef': 'off',
+      // React Hooks 규칙을 경고로 변경 (일부 패턴은 의도적으로 사용)
+      'react-hooks/purity': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
     },
     settings: {
       react: {

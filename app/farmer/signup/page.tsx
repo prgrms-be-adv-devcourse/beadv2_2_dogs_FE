@@ -65,7 +65,7 @@ export default function FarmerSignupPage() {
             }
           }
         }
-        
+
         // 더미 사용자 정보도 없으면 로그인 페이지로 리다이렉트
         toast({
           title: '로그인이 필요합니다',
@@ -92,10 +92,10 @@ export default function FarmerSignupPage() {
   const formatBusinessNumber = (value: string): string => {
     // 숫자만 추출
     const numbers = value.replace(/[^\d]/g, '')
-    
+
     // 최대 10자리까지만
     const limited = numbers.slice(0, 10)
-    
+
     // 하이픈 자동 추가
     if (limited.length <= 3) {
       return limited
@@ -108,14 +108,15 @@ export default function FarmerSignupPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    
+
     // 사업자 등록번호는 자동 포맷팅
     if (name === 'businessNumber') {
       const formatted = formatBusinessNumber(value)
       setFormData({ ...formData, [name]: formatted })
-      
+
       // 실시간 검증
-      if (formatted.length === 12) { // XXX-XX-XXXXX = 12자리
+      if (formatted.length === 12) {
+        // XXX-XX-XXXXX = 12자리
         if (validateBusinessNumber(formatted)) {
           setErrors((prev) => {
             const next = { ...prev }
@@ -158,26 +159,26 @@ export default function FarmerSignupPage() {
 
     // 필수 필드 검증
     const newErrors: Record<string, string> = {}
-    
+
     if (!formData.farmName.trim()) {
       newErrors.farmName = '농장명을 입력해주세요'
     }
-    
+
     if (!formData.farmAddress.trim()) {
       newErrors.farmAddress = '농장 주소를 입력해주세요'
     }
-    
+
     if (!formData.farmDescription.trim()) {
       newErrors.farmDescription = '농장 소개를 입력해주세요'
     }
-    
+
     // 사업자 등록번호 검증
     if (!formData.businessNumber.trim()) {
       newErrors.businessNumber = '사업자 등록번호를 입력해주세요'
     } else if (!validateBusinessNumber(formData.businessNumber)) {
       newErrors.businessNumber = '올바른 사업자 등록번호 형식이 아닙니다 (예: 123-45-67890)'
     }
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
       toast({
@@ -193,15 +194,15 @@ export default function FarmerSignupPage() {
     try {
       // TODO: Implement farmer signup logic with backend API
       console.log('[v0] Farmer signup attempt:', formData)
-      
+
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000))
-      
+
       toast({
         title: '농가 등록 신청이 완료되었습니다',
         description: '검토 후 승인되면 알림을 드리겠습니다.',
       })
-      
+
       router.push('/farmer/login')
     } catch (error) {
       toast({
@@ -309,9 +310,7 @@ export default function FarmerSignupPage() {
                   className={errors.farmName ? 'border-destructive' : ''}
                   required
                 />
-                {errors.farmName && (
-                  <p className="text-xs text-destructive">{errors.farmName}</p>
-                )}
+                {errors.farmName && <p className="text-xs text-destructive">{errors.farmName}</p>}
               </div>
 
               <div className="space-y-2">

@@ -31,4 +31,3 @@ export function NotificationIcon({ className }: NotificationIconProps) {
     </Button>
   )
 }
-

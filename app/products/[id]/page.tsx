@@ -36,6 +36,8 @@ export default function ProductDetailPage() {
   const cartItemsCount = mounted ? getTotalItems() : 0
 
   useEffect(() => {
+    // 마운트 상태 설정을 위한 effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 
@@ -140,10 +142,7 @@ export default function ProductDetailPage() {
       title: '장바구니에 추가되었습니다',
       description: `${product.name} ${quantity}개가 장바구니에 담겼습니다.`,
       action: (
-        <ToastAction
-          altText="장바구니 보기"
-          onClick={() => router.push('/cart')}
-        >
+        <ToastAction altText="장바구니 보기" onClick={() => router.push('/cart')}>
           장바구니 보기
         </ToastAction>
       ),

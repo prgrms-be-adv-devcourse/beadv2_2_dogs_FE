@@ -60,9 +60,7 @@ export function ReviewSummary({
                   <Star className="h-3 w-3 fill-primary text-primary" />
                 </div>
                 <Progress value={percentage} className="flex-1 h-2" />
-                <span className="text-sm text-muted-foreground w-12 text-right">
-                  {count}개
-                </span>
+                <span className="text-sm text-muted-foreground w-12 text-right">{count}개</span>
               </div>
             )
           })}
@@ -71,4 +69,3 @@ export function ReviewSummary({
     </Card>
   )
 }
-

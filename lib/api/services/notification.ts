@@ -27,5 +27,3 @@ export const notificationService = {
     return notificationApi.delete(`/api/notifications/${id}`)
   },
 }
-
-

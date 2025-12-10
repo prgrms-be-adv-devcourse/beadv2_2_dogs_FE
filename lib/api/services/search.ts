@@ -34,5 +34,3 @@ export const searchService = {
     return searchApi.get<string[]>('/api/search/suggestions', { params: { keyword } })
   },
 }
-
-

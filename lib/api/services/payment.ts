@@ -27,5 +27,3 @@ export const paymentService = {
     return paymentApi.post<Payment>('/api/payments/confirm', { transactionId })
   },
 }
-
-

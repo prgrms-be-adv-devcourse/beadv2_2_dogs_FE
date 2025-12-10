@@ -74,7 +74,7 @@ export default function CheckoutPage() {
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
       clearCart()
-      
+
       toast({
         title: '주문이 완료되었습니다',
         description: `총 ${finalPrice.toLocaleString()}원이 결제되었습니다.`,

@@ -32,7 +32,9 @@ test.describe('알림 기능 테스트', () => {
 
     // 알림이 있는 경우 확인
     // Mock 데이터가 있으므로 알림 카드가 표시될 수 있음
-    const notificationCards = page.locator('[class*="card"]').filter({ hasText: /주문|배송|결제|리뷰/ })
+    const notificationCards = page
+      .locator('[class*="card"]')
+      .filter({ hasText: /주문|배송|결제|리뷰/ })
     const count = await notificationCards.count()
 
     if (count > 0) {
@@ -54,7 +56,7 @@ test.describe('알림 기능 테스트', () => {
     if (unreadCount > 0) {
       // 읽음 버튼 찾기
       const readButton = page.locator('button').filter({ hasText: '읽음' }).first()
-      if (await readButton.count() > 0) {
+      if ((await readButton.count()) > 0) {
         await readButton.click()
         // 읽음 처리 후 배지가 사라지는지 확인 (약간의 지연 후)
         await page.waitForTimeout(500)
@@ -127,4 +129,3 @@ test.describe('알림 기능 테스트', () => {
     await expect(page).toHaveURL('http://localhost:3000')
   })
 })
-

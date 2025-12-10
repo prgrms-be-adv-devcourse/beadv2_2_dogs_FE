@@ -158,5 +158,3 @@ export const notificationApi = new ApiClient('NOTIFICATION')
 export const experienceApi = new ApiClient('EXPERIENCE')
 export const searchApi = new ApiClient('SEARCH')
 export const reviewApi = new ApiClient('REVIEW')
-
-

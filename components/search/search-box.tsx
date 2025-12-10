@@ -65,10 +65,7 @@ export function SearchBox({
   // 외부 클릭 감지
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setShowSuggestions(false)
       }
     }
@@ -140,4 +137,3 @@ export function SearchBox({
     </div>
   )
 }
-

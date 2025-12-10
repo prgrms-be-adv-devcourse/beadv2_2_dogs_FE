@@ -60,4 +60,3 @@ export const MIN_SUGGESTION_LENGTH = 2
  * 검색어 추천을 위한 최소 길이
  */
 export const MIN_SEARCH_LENGTH = 1
-

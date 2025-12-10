@@ -106,30 +106,33 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   }, [])
 
   // 알림 삭제
-  const deleteNotification = useCallback(async (id: number) => {
-    try {
-      await notificationService.deleteNotification(id)
-      const deletedNotification = notifications.find((n) => n.id === id)
-      setNotifications((prev) => prev.filter((notif) => notif.id !== id))
-      // 읽지 않은 알림이었다면 개수 감소
-      if (deletedNotification && !deletedNotification.isRead) {
-        setUnreadCount((prev) => Math.max(0, prev - 1))
-      }
-    } catch (err) {
-      // API 호출 실패 시에도 로컬 상태는 업데이트
-      const error = err as { status?: number; message?: string }
-      if (error.status === 0 || error.status === 404 || !error.status) {
+  const deleteNotification = useCallback(
+    async (id: number) => {
+      try {
+        await notificationService.deleteNotification(id)
         const deletedNotification = notifications.find((n) => n.id === id)
         setNotifications((prev) => prev.filter((notif) => notif.id !== id))
+        // 읽지 않은 알림이었다면 개수 감소
         if (deletedNotification && !deletedNotification.isRead) {
           setUnreadCount((prev) => Math.max(0, prev - 1))
         }
-      } else {
-        console.warn('알림 삭제 실패:', error.message || error)
-        throw err
+      } catch (err) {
+        // API 호출 실패 시에도 로컬 상태는 업데이트
+        const error = err as { status?: number; message?: string }
+        if (error.status === 0 || error.status === 404 || !error.status) {
+          const deletedNotification = notifications.find((n) => n.id === id)
+          setNotifications((prev) => prev.filter((notif) => notif.id !== id))
+          if (deletedNotification && !deletedNotification.isRead) {
+            setUnreadCount((prev) => Math.max(0, prev - 1))
+          }
+        } else {
+          console.warn('알림 삭제 실패:', error.message || error)
+          throw err
+        }
       }
-    }
-  }, [notifications])
+    },
+    [notifications]
+  )
 
   // 초기 로드 및 폴링
   useEffect(() => {
@@ -159,4 +162,3 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     },
   }
 }
-

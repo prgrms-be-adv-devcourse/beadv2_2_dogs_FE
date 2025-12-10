@@ -202,9 +202,7 @@ export default function FarmsPage() {
       <section className="py-12 bg-muted/30 border-b">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">농장 찾기</h1>
-          <p className="text-muted-foreground">
-            신뢰할 수 있는 농가를 찾아보고 직접 만나보세요
-          </p>
+          <p className="text-muted-foreground">신뢰할 수 있는 농가를 찾아보고 직접 만나보세요</p>
         </div>
       </section>
 
@@ -263,12 +261,10 @@ export default function FarmsPage() {
         <div className="container mx-auto px-4">
           <div className="mb-6 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              총 <span className="font-semibold text-foreground">{filteredAndSortedFarms.length}</span>개의 농장
-              {hasActiveFilters && (
-                <span className="ml-2 text-xs">
-                  (전체 {farms.length}개 중)
-                </span>
-              )}
+              총{' '}
+              <span className="font-semibold text-foreground">{filteredAndSortedFarms.length}</span>
+              개의 농장
+              {hasActiveFilters && <span className="ml-2 text-xs">(전체 {farms.length}개 중)</span>}
             </p>
             {hasActiveFilters && (
               <Button
@@ -287,9 +283,7 @@ export default function FarmsPage() {
             <div className="text-center py-16">
               <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">검색 결과가 없습니다</h3>
-              <p className="text-muted-foreground mb-4">
-                다른 검색어나 필터를 시도해보세요
-              </p>
+              <p className="text-muted-foreground mb-4">다른 검색어나 필터를 시도해보세요</p>
               <Button variant="outline" onClick={clearFilters}>
                 필터 초기화
               </Button>
@@ -326,9 +320,7 @@ export default function FarmsPage() {
                         <div className="flex items-center gap-1">
                           <Star className="h-4 w-4 fill-primary text-primary" />
                           <span className="text-sm font-medium">{farm.rating}</span>
-                          <span className="text-sm text-muted-foreground">
-                            ({farm.reviews})
-                          </span>
+                          <span className="text-sm text-muted-foreground">({farm.reviews})</span>
                         </div>
                       </div>
                     </Link>
@@ -365,14 +357,10 @@ export default function FarmsPage() {
 
                     <div className="flex gap-2 pt-4 border-t">
                       <Button variant="outline" size="sm" className="flex-1" asChild>
-                        <Link href={`/farms/${farm.id}`}>
-                          농장 상세보기
-                        </Link>
+                        <Link href={`/farms/${farm.id}`}>농장 상세보기</Link>
                       </Button>
                       <Button variant="outline" size="sm" className="flex-1" asChild>
-                        <Link href={`/products?farm=${farm.id}`}>
-                          상품 보기
-                        </Link>
+                        <Link href={`/products?farm=${farm.id}`}>상품 보기</Link>
                       </Button>
                     </div>
                   </div>
@@ -385,4 +373,3 @@ export default function FarmsPage() {
     </div>
   )
 }
-

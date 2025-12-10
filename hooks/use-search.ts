@@ -139,4 +139,3 @@ export function useSearch(options: UseSearchOptions = {}) {
     hasQuery: query.trim().length >= minLength,
   }
 }
-

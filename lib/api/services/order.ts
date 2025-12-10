@@ -37,5 +37,3 @@ export const orderService = {
     return orderApi.post<Order>(`/api/orders/${id}/confirm`)
   },
 }
-
-

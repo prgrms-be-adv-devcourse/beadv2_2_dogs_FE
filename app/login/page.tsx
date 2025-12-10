@@ -27,14 +27,14 @@ export default function LoginPage() {
     try {
       // TODO: Implement login logic with backend API
       console.log('[v0] Login attempt:', { email, password })
-      
+
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000))
-      
+
       // 개발 환경: 더미 토큰 저장
       const dummyToken = 'dummy-access-token-' + Date.now()
       setAccessToken(dummyToken)
-      
+
       // 더미 사용자 정보를 localStorage에 저장 (농가 등록 페이지에서 사용)
       if (typeof window !== 'undefined') {
         const dummyUser = {
@@ -47,12 +47,12 @@ export default function LoginPage() {
         }
         localStorage.setItem('dummyUser', JSON.stringify(dummyUser))
       }
-      
+
       toast({
         title: '로그인 성공',
         description: '환영합니다!',
       })
-      
+
       router.push('/')
     } catch (error) {
       toast({
@@ -126,7 +126,7 @@ export default function LoginPage() {
                   // 자동으로 로그인 처리
                   const dummyToken = 'dummy-access-token-' + Date.now()
                   setAccessToken(dummyToken)
-                  
+
                   if (typeof window !== 'undefined') {
                     const dummyUser = {
                       id: 1,
@@ -138,12 +138,12 @@ export default function LoginPage() {
                     }
                     localStorage.setItem('dummyUser', JSON.stringify(dummyUser))
                   }
-                  
+
                   toast({
                     title: '빠른 로그인 완료',
                     description: '개발용 더미 계정으로 로그인되었습니다.',
                   })
-                  
+
                   router.push('/')
                 }}
               >

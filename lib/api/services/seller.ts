@@ -77,5 +77,3 @@ export const sellerService = {
     return settlementApi.get<Settlement>(`/api/settlements/${id}`)
   },
 }
-
-

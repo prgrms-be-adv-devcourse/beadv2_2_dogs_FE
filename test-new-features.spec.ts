@@ -109,10 +109,16 @@ test.describe('새로 추가된 기능 테스트', () => {
     await expect(page.locator('text=리뷰 내용')).toBeVisible()
 
     // 별점 클릭 테스트
-    const stars = page.locator('[data-testid="star"]').or(page.locator('svg').filter({ hasText: '' })).first()
+    const stars = page
+      .locator('[data-testid="star"]')
+      .or(page.locator('svg').filter({ hasText: '' }))
+      .first()
     // 별점 버튼 찾기 (더 정확한 선택자 사용)
-    const starButtons = page.locator('button').filter({ has: page.locator('svg') }).first()
-    
+    const starButtons = page
+      .locator('button')
+      .filter({ has: page.locator('svg') })
+      .first()
+
     // 리뷰 내용 입력
     await page.fill('textarea', '정말 맛있고 신선한 상품이었습니다!')
 
@@ -142,4 +148,3 @@ test.describe('새로 추가된 기능 테스트', () => {
     }
   })
 })
-

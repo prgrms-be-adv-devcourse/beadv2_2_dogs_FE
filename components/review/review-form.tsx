@@ -11,11 +11,7 @@ import { useToast } from '@/hooks/use-toast'
 interface ReviewFormProps {
   productId?: number
   experienceId?: number
-  onSubmit?: (review: {
-    rating: number
-    content: string
-    images?: File[]
-  }) => void
+  onSubmit?: (review: { rating: number; content: string; images?: File[] }) => void
   onCancel?: () => void
 }
 
@@ -124,11 +120,7 @@ export function ReviewForm({ productId, experienceId, onSubmit, onCancel }: Revi
                 />
               </button>
             ))}
-            {rating > 0 && (
-              <span className="ml-2 text-sm text-muted-foreground">
-                {rating}점
-              </span>
-            )}
+            {rating > 0 && <span className="ml-2 text-sm text-muted-foreground">{rating}점</span>}
           </div>
         </div>
 
@@ -143,9 +135,7 @@ export function ReviewForm({ productId, experienceId, onSubmit, onCancel }: Revi
             className="mt-2 min-h-[120px]"
             maxLength={1000}
           />
-          <div className="text-right text-sm text-muted-foreground mt-1">
-            {content.length}/1000
-          </div>
+          <div className="text-right text-sm text-muted-foreground mt-1">{content.length}/1000</div>
         </div>
 
         {/* Images */}
@@ -200,4 +190,3 @@ export function ReviewForm({ productId, experienceId, onSubmit, onCancel }: Revi
     </Card>
   )
 }
-

@@ -193,9 +193,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
               <p className="text-muted-foreground">주문번호: {order.orderNumber}</p>
               {getStatusBadge(order.status)}
             </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              주문일시: {order.date}
-            </p>
+            <p className="text-sm text-muted-foreground mt-2">주문일시: {order.date}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={handlePrintInvoice}>
@@ -244,9 +242,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                         <div className="text-sm text-muted-foreground">
                           {item.price.toLocaleString()}원 × {item.quantity}개
                         </div>
-                        <div className="font-semibold">
-                          {item.subtotal.toLocaleString()}원
-                        </div>
+                        <div className="font-semibold">{item.subtotal.toLocaleString()}원</div>
                       </div>
                     </div>
                   </div>
@@ -311,7 +307,10 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">결제 상태</span>
-                  <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
+                  <Badge
+                    variant="secondary"
+                    className="bg-green-50 text-green-700 border-green-200"
+                  >
                     {order.paymentStatus}
                   </Badge>
                 </div>
@@ -376,4 +375,3 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
     </div>
   )
 }
-

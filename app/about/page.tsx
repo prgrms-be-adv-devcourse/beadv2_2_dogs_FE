@@ -159,16 +159,17 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">핵심 가치</h2>
-            <p className="text-lg text-muted-foreground">
-              바로팜이 추구하는 가치와 원칙
-            </p>
+            <p className="text-lg text-muted-foreground">바로팜이 추구하는 가치와 원칙</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {values.map((value) => {
               const Icon = value.icon
               return (
-                <Card key={value.title} className="p-6 text-center hover:shadow-lg transition-shadow">
+                <Card
+                  key={value.title}
+                  className="p-6 text-center hover:shadow-lg transition-shadow"
+                >
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <Icon className="h-6 w-6 text-primary" />
                   </div>
@@ -186,9 +187,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">주요 기능</h2>
-            <p className="text-lg text-muted-foreground">
-              바로팜이 제공하는 다양한 서비스
-            </p>
+            <p className="text-lg text-muted-foreground">바로팜이 제공하는 다양한 서비스</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
@@ -303,4 +302,3 @@ export default function AboutPage() {
     </div>
   )
 }
-

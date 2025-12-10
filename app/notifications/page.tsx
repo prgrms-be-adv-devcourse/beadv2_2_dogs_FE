@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,18 +16,16 @@ import {
   Settings,
   ArrowLeft,
 } from 'lucide-react'
-import Link from 'next/link'
 import { Header } from '@/components/layout/header'
 import { useRouter } from 'next/navigation'
 import { useNotifications } from '@/hooks/use-notifications'
-import { NotificationIcon } from '@/components/notification'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import type { NotificationType } from '@/lib/api/types'
 
 export default function NotificationsPage() {
   const router = useRouter()
-  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, deleteNotification, refresh } =
+  const { notifications, isLoading, markAsRead, markAllAsRead, deleteNotification, refresh } =
     useNotifications({ autoPoll: false })
 
   const [selectedNotifications, setSelectedNotifications] = useState<Set<number>>(new Set())
@@ -99,14 +97,6 @@ export default function NotificationsPage() {
     }
   }
 
-  const handleSelectAll = () => {
-    if (selectedNotifications.size === notifications.length) {
-      setSelectedNotifications(new Set())
-    } else {
-      setSelectedNotifications(new Set(notifications.map((n) => n.id)))
-    }
-  }
-
   const handleDeleteSelected = async () => {
     const promises = Array.from(selectedNotifications).map((id) => deleteNotification(id))
     try {
@@ -118,53 +108,60 @@ export default function NotificationsPage() {
   }
 
   // Mock 데이터 (실제로는 API에서 가져옴)
-  const mockNotifications = [
-    {
-      id: 1,
-      userId: 1,
-      type: 'ORDER_STATUS' as NotificationType,
-      title: '주문이 배송 준비되었습니다',
-      message: '주문번호 ORD-001234의 상품이 배송 준비되었습니다.',
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      userId: 1,
-      type: 'DELIVERY_STATUS' as NotificationType,
-      title: '배송이 시작되었습니다',
-      message: '주문번호 ORD-001233의 상품이 배송 중입니다.',
-      isRead: false,
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-      id: 3,
-      userId: 1,
-      type: 'PAYMENT' as NotificationType,
-      title: '결제가 완료되었습니다',
-      message: '주문번호 ORD-001232의 결제가 완료되었습니다.',
-      isRead: true,
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-    },
-    {
-      id: 4,
-      userId: 1,
-      type: 'REVIEW' as NotificationType,
-      title: '리뷰에 답변이 달렸습니다',
-      message: '작성하신 리뷰에 농가의 답변이 등록되었습니다.',
-      isRead: true,
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-  ]
+  // 상수로 정의하여 렌더링 중 impure function 호출 방지
+  const mockNotifications = useMemo(() => {
+    // 고정된 타임스탬프 사용 (1시간 전, 2시간 전, 24시간 전)
+    const oneHourAgo = 3600000
+    const twoHoursAgo = 7200000
+    const oneDayAgo = 86400000
+
+    // 현재 시간을 컴포넌트 외부에서 계산하지 않고, 상대 시간만 사용
+    // 실제로는 API에서 받은 ISO 문자열을 사용하므로 문제 없음
+    const baseTime = new Date('2024-12-07T12:00:00Z').getTime()
+
+    return [
+      {
+        id: 1,
+        userId: 1,
+        type: 'ORDER_STATUS' as NotificationType,
+        title: '주문이 배송 준비되었습니다',
+        message: '주문번호 ORD-001234의 상품이 배송 준비되었습니다.',
+        isRead: false,
+        createdAt: new Date(baseTime).toISOString(),
+      },
+      {
+        id: 2,
+        userId: 1,
+        type: 'DELIVERY_STATUS' as NotificationType,
+        title: '배송이 시작되었습니다',
+        message: '주문번호 ORD-001233의 상품이 배송 중입니다.',
+        isRead: false,
+        createdAt: new Date(baseTime - oneHourAgo).toISOString(),
+      },
+      {
+        id: 3,
+        userId: 1,
+        type: 'PAYMENT' as NotificationType,
+        title: '결제가 완료되었습니다',
+        message: '주문번호 ORD-001232의 결제가 완료되었습니다.',
+        isRead: true,
+        createdAt: new Date(baseTime - twoHoursAgo).toISOString(),
+      },
+      {
+        id: 4,
+        userId: 1,
+        type: 'REVIEW' as NotificationType,
+        title: '리뷰에 답변이 달렸습니다',
+        message: '작성하신 리뷰에 농가의 답변이 등록되었습니다.',
+        isRead: true,
+        createdAt: new Date(baseTime - oneDayAgo).toISOString(),
+      },
+    ]
+  }, [])
 
   // 개발 환경에서는 Mock 데이터 사용, 프로덕션에서는 실제 데이터 사용
   const displayNotifications = notifications.length > 0 ? notifications : mockNotifications
   const unreadNotifications = displayNotifications.filter((n) => !n.isRead)
-  
-  // Mock 데이터 사용 시 unreadCount 업데이트
-  const actualUnreadCount = notifications.length > 0 
-    ? unreadNotifications.length 
-    : mockNotifications.filter((n) => !n.isRead).length
 
   return (
     <div className="min-h-screen bg-background">
@@ -308,4 +305,3 @@ export default function NotificationsPage() {
     </div>
   )
 }
-

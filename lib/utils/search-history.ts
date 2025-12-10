@@ -43,10 +43,10 @@ export function addSearchHistory(keyword: string, type?: SearchHistoryItem['type
 
   try {
     const history = getSearchHistory()
-    
+
     // 중복 제거 (같은 키워드가 있으면 제거 후 맨 앞에 추가)
     const filtered = history.filter((item) => item.keyword !== keyword)
-    
+
     const newItem: SearchHistoryItem = {
       keyword: keyword.trim(),
       timestamp: Date.now(),
@@ -56,7 +56,7 @@ export function addSearchHistory(keyword: string, type?: SearchHistoryItem['type
     const updated = [newItem, ...filtered].slice(0, MAX_HISTORY_LENGTH)
     localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated))
     console.debug('검색 히스토리 저장 완료:', updated)
-    
+
     // storage 이벤트 발생 (같은 탭에서도 감지하도록)
     window.dispatchEvent(new Event('searchHistoryUpdated'))
   } catch (error) {
@@ -98,4 +98,3 @@ export function clearSearchHistory(): void {
 export function getRecentSearches(limit: number = 5): SearchHistoryItem[] {
   return getSearchHistory().slice(0, limit)
 }
-

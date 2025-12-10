@@ -18,11 +18,5 @@ export function HighlightText({ text, keyword, className }: HighlightTextProps) 
 
   const highlighted = highlightKeyword(text, keyword)
 
-  return (
-    <span
-      className={className}
-      dangerouslySetInnerHTML={{ __html: highlighted }}
-    />
-  )
+  return <span className={className} dangerouslySetInnerHTML={{ __html: highlighted }} />
 }
-

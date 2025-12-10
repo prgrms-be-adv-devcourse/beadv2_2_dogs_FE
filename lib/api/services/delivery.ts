@@ -12,5 +12,3 @@ export const deliveryService = {
     return deliveryApi.get<Delivery>(`/api/deliveries/track/${trackingNumber}`)
   },
 }
-
-

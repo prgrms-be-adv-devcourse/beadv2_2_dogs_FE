@@ -5,4 +5,3 @@ export { SearchInput } from './search-input'
 export { SearchSuggestions } from './search-suggestions'
 export { SearchBox } from './search-box'
 export { HighlightText } from './highlight-text'
-

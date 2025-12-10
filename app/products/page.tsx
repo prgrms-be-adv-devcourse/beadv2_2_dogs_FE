@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Star, Filter, X } from 'lucide-react'
+import { MapPin, Star, Filter, X, Search } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SearchBox } from '@/components/search'
@@ -248,11 +248,13 @@ export default function ProductsPage() {
         <div className="container mx-auto px-4">
           <div className="mb-6 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              총 <span className="font-semibold text-foreground">{filteredAndSortedProducts.length}</span>개의 상품
+              총{' '}
+              <span className="font-semibold text-foreground">
+                {filteredAndSortedProducts.length}
+              </span>
+              개의 상품
               {hasActiveFilters && (
-                <span className="ml-2 text-xs">
-                  (전체 {products.length}개 중)
-                </span>
+                <span className="ml-2 text-xs">(전체 {products.length}개 중)</span>
               )}
             </p>
             {hasActiveFilters && (
@@ -272,9 +274,7 @@ export default function ProductsPage() {
             <div className="text-center py-16">
               <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">검색 결과가 없습니다</h3>
-              <p className="text-muted-foreground mb-4">
-                다른 검색어나 필터를 시도해보세요
-              </p>
+              <p className="text-muted-foreground mb-4">다른 검색어나 필터를 시도해보세요</p>
               <Button variant="outline" onClick={clearFilters}>
                 필터 초기화
               </Button>
@@ -282,42 +282,44 @@ export default function ProductsPage() {
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {filteredAndSortedProducts.map((product) => (
-              <Card
-                key={product.id}
-                className="overflow-hidden group hover:shadow-lg transition-shadow"
-              >
-                <Link href={`/products/${product.id}`}>
-                  <div className="relative aspect-square overflow-hidden bg-muted">
-                    <Image
-                      src={product.image || '/placeholder.svg'}
-                      alt={product.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform"
-                    />
-                    <Badge className="absolute top-3 left-3">{product.tag}</Badge>
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
-                      <MapPin className="h-3 w-3" />
-                      <span>{product.farm}</span>
-                      <span className="mx-1">•</span>
-                      <span>{product.location}</span>
+                <Card
+                  key={product.id}
+                  className="overflow-hidden group hover:shadow-lg transition-shadow"
+                >
+                  <Link href={`/products/${product.id}`}>
+                    <div className="relative aspect-square overflow-hidden bg-muted">
+                      <Image
+                        src={product.image || '/placeholder.svg'}
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform"
+                      />
+                      <Badge className="absolute top-3 left-3">{product.tag}</Badge>
                     </div>
-                    <h3 className="font-semibold mb-2">{product.name}</h3>
-                    <div className="flex items-center gap-1 mb-3">
-                      <Star className="h-4 w-4 fill-primary text-primary" />
-                      <span className="text-sm font-medium">{product.rating}</span>
-                      <span className="text-sm text-muted-foreground">({product.reviews})</span>
+                    <div className="p-4">
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                        <MapPin className="h-3 w-3" />
+                        <span>{product.farm}</span>
+                        <span className="mx-1">•</span>
+                        <span>{product.location}</span>
+                      </div>
+                      <h3 className="font-semibold mb-2">{product.name}</h3>
+                      <div className="flex items-center gap-1 mb-3">
+                        <Star className="h-4 w-4 fill-primary text-primary" />
+                        <span className="text-sm font-medium">{product.rating}</span>
+                        <span className="text-sm text-muted-foreground">({product.reviews})</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold">
+                          {product.price.toLocaleString()}원
+                        </span>
+                        <span className="text-sm text-muted-foreground line-through">
+                          {product.originalPrice.toLocaleString()}원
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold">{product.price.toLocaleString()}원</span>
-                      <span className="text-sm text-muted-foreground line-through">
-                        {product.originalPrice.toLocaleString()}원
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              </Card>
+                  </Link>
+                </Card>
               ))}
             </div>
           )}
