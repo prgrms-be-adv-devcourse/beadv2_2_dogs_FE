@@ -37,6 +37,11 @@ echo "🚀 Deploying frontend..."
 echo "📦 Image: ${FULL_IMAGE_NAME}"
 echo "🏷️  Tag: ${IMAGE_TAG}"
 
+# USER 환경 변수 확인 (없으면 현재 사용자 사용)
+if [ -z "$USER" ]; then
+  USER=$(whoami)
+fi
+
 # 작업 디렉토리 설정
 DEPLOY_DIR="/home/${USER}/apps/FE"
 mkdir -p ${DEPLOY_DIR}
@@ -46,9 +51,19 @@ cd ${DEPLOY_DIR}
 echo "🔐 Logging in to GitHub Container Registry..."
 echo "$GITHUB_TOKEN" | docker login ${REGISTRY} -u do-develop-space --password-stdin
 
+# Docker Compose 명령어 확인 (v1 또는 v2)
+if command -v docker-compose &> /dev/null; then
+  DOCKER_COMPOSE="docker-compose"
+elif docker compose version &> /dev/null; then
+  DOCKER_COMPOSE="docker compose"
+else
+  echo "❌ docker-compose or docker compose not found"
+  exit 1
+fi
+
 # 기존 컨테이너 중지 및 제거
 echo "🛑 Stopping existing containers..."
-docker-compose down || true
+$DOCKER_COMPOSE down || true
 
 # 오래된 이미지 정리 (선택사항)
 echo "🧹 Cleaning up old images..."
@@ -89,9 +104,9 @@ fi
 # 컨테이너 시작
 echo "🚀 Starting containers..."
 if [ -n "$IMAGE_TO_USE" ]; then
-  docker-compose up -d
+  $DOCKER_COMPOSE up -d
 else
-  docker-compose up -d --build
+  $DOCKER_COMPOSE up -d --build
 fi
 
 # 헬스 체크
@@ -99,18 +114,18 @@ echo "🏥 Health check..."
 sleep 10
 
 # 컨테이너 상태 확인
-if docker-compose ps | grep -q "Up"; then
+if $DOCKER_COMPOSE ps | grep -q "Up"; then
   echo "✅ Frontend deployed successfully!"
-  docker-compose ps
-  docker-compose logs --tail=20 frontend
+  $DOCKER_COMPOSE ps
+  $DOCKER_COMPOSE logs --tail=20 frontend
   
   # 배포 이력 기록
   DEPLOYED_IMAGE=$(docker inspect ${SERVICE_NAME} --format='{{.Config.Image}}' 2>/dev/null || echo "unknown")
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deploy: frontend to ${DEPLOYED_IMAGE} (tag: ${IMAGE_TAG})" >> ~/apps/FE/deployment-history.log
 else
   echo "❌ Deployment failed!"
-  docker-compose ps
-  docker-compose logs frontend
+  $DOCKER_COMPOSE ps
+  $DOCKER_COMPOSE logs frontend
   exit 1
 fi
 

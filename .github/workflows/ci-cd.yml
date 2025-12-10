@@ -225,15 +225,18 @@ jobs:
           # EC2에 배포 디렉토리 생성
           ssh $SSH_OPTS ${USER}@${HOST} "mkdir -p /home/${USER}/apps/FE"
 
-          # EC2에 배포 스크립트 및 docker-compose 파일들 복사
+          # EC2에 배포 스크립트 및 docker-compose 파일들 복사 (FE 폴더 안으로)
           scp $SSH_OPTS \
-            ./scripts/deploy-frontend.sh ${USER}@${HOST}:/home/${USER}/
+            ./scripts/deploy-frontend.sh ${USER}@${HOST}:/home/${USER}/apps/FE/
 
           scp $SSH_OPTS \
             ./docker-compose.yml ${USER}@${HOST}:/home/${USER}/apps/FE/
 
           scp $SSH_OPTS \
             ./Dockerfile ${USER}@${HOST}:/home/${USER}/apps/FE/
+          
+          # 스크립트에 실행 권한 부여
+          ssh $SSH_OPTS ${USER}@${HOST} "chmod +x /home/${USER}/apps/FE/deploy-frontend.sh"
 
           # GHCR_PAT 또는 GITHUB_TOKEN 사용 (GHCR_PAT 우선)
           if [ -n "${{ secrets.GHCR_PAT }}" ]; then
@@ -252,7 +255,7 @@ jobs:
 
           ssh $SSH_OPTS ${USER}@${HOST} \
             "cd /home/${USER}/apps/FE && \
-             nohup bash -c 'GITHUB_TOKEN=${GHCR_TOKEN} GITHUB_REF=${{ github.ref }} REGISTRY=${{ env.REGISTRY }} IMAGE_NAME=${{ env.IMAGE_NAME }} SERVICE_NAME=${{ env.SERVICE_NAME }} bash /home/${USER}/deploy-frontend.sh' > ${DEPLOY_LOG} 2>&1 & \
+             nohup bash -c 'USER=${USER} GITHUB_TOKEN=${GHCR_TOKEN} GITHUB_REF=${{ github.ref }} REGISTRY=${{ env.REGISTRY }} IMAGE_NAME=${{ env.IMAGE_NAME }} SERVICE_NAME=${{ env.SERVICE_NAME }} bash /home/${USER}/apps/FE/deploy-frontend.sh' > ${DEPLOY_LOG} 2>&1 & \
              echo \$! > /tmp/deploy-frontend.pid"
 
           echo "⏳ Deployment started in background. PID saved to /tmp/deploy-frontend.pid"
