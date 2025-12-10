@@ -234,7 +234,7 @@ jobs:
 
           scp $SSH_OPTS \
             ./Dockerfile ${USER}@${HOST}:/home/${USER}/apps/FE/
-          
+
           # 스크립트에 실행 권한 부여
           ssh $SSH_OPTS ${USER}@${HOST} "chmod +x /home/${USER}/apps/FE/deploy-frontend.sh"
 
