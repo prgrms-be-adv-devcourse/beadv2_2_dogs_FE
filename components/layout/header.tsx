@@ -20,7 +20,7 @@ export function Header({ showCart = false }: HeaderProps) {
   const { toast } = useToast()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const cartItemsCount = useCartStore((state) => state.items.length)
-  const clearCart = useCartStore((state) => state.clear)
+  const clearCart = useCartStore((state) => state.clearCart)
 
   useEffect(() => {
     // 로그인 상태 확인
@@ -63,8 +63,12 @@ export function Header({ showCart = false }: HeaderProps) {
         localStorage.removeItem('accessToken')
       }
 
-      // 장바구니 비우기
-      clearCart()
+      // 장바구니 비우기 (에러가 나도 계속 진행)
+      try {
+        clearCart()
+      } catch (error) {
+        console.warn('장바구니 비우기 실패 (계속 진행):', error)
+      }
 
       // 로그인 상태 업데이트
       setIsLoggedIn(false)
@@ -109,16 +113,10 @@ export function Header({ showCart = false }: HeaderProps) {
           >
             농장 체험
           </Link>
-          <Link
-            href="/farms"
-            className="text-sm font-medium hover:text-primary transition-colors"
-          >
+          <Link href="/farms" className="text-sm font-medium hover:text-primary transition-colors">
             농장 찾기
           </Link>
-          <Link
-            href="/about"
-            className="text-sm font-medium hover:text-primary transition-colors"
-          >
+          <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">
             소개
           </Link>
         </nav>
@@ -162,4 +160,3 @@ export function Header({ showCart = false }: HeaderProps) {
     </header>
   )
 }
-

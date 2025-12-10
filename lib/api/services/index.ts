@@ -10,5 +10,4 @@ export { paymentService } from './payment'
 export { deliveryService } from './delivery'
 export { notificationService } from './notification'
 export { sellerService } from './seller'
-
-
+export { uploadService } from './upload'

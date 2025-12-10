@@ -60,10 +60,28 @@ export const authService = {
     return authApi.post('/api/auth/password/reset', { token, newPassword })
   },
 
-  // 이메일 인증
+  // 이메일 인증 코드 요청
+  async requestEmailVerification(email: string): Promise<void> {
+    return authApi.post('/api/auth/email/verification-request', { email })
+  },
+
+  // 이메일 인증 코드 확인
+  async verifyEmailCode(email: string, code: string): Promise<{ verified: boolean }> {
+    return authApi.post('/api/auth/email/verify-code', { email, code })
+  },
+
+  // 이메일 인증 (토큰 기반)
   async verifyEmail(token: string): Promise<void> {
     return authApi.post('/api/auth/verify-email', { token })
   },
+
+  // 판매자 전환 요청
+  async requestSellerRole(data: {
+    farmName: string
+    farmAddress: string
+    farmDescription?: string
+    businessNumber?: string
+  }): Promise<User> {
+    return authApi.post('/api/auth/request-seller-role', data)
+  },
 }
-
-

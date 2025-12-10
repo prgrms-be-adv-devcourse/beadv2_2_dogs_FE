@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import {
   Sprout,
   Package,
@@ -15,8 +15,8 @@ import {
   Plus,
   Settings,
   LogOut,
-} from "lucide-react"
-import Link from "next/link"
+} from 'lucide-react'
+import Link from 'next/link'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,104 +24,104 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+} from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 export default function FarmerDashboardPage() {
-  const [activeTab, setActiveTab] = useState("overview")
+  const [activeTab, setActiveTab] = useState('overview')
 
   const stats = [
     {
-      title: "이번 달 매출",
-      value: "2,450,000원",
-      change: "+12.5%",
+      title: '이번 달 매출',
+      value: '2,450,000원',
+      change: '+12.5%',
       icon: DollarSign,
-      trend: "up",
+      trend: 'up',
     },
     {
-      title: "진행 중 주문",
-      value: "23건",
-      change: "+5건",
+      title: '진행 중 주문',
+      value: '23건',
+      change: '+5건',
       icon: ShoppingBag,
-      trend: "up",
+      trend: 'up',
     },
     {
-      title: "등록 상품",
-      value: "12개",
-      change: "2개 품절",
+      title: '등록 상품',
+      value: '12개',
+      change: '2개 품절',
       icon: Package,
-      trend: "neutral",
+      trend: 'neutral',
     },
     {
-      title: "예약된 체험",
-      value: "8건",
-      change: "+3건",
+      title: '예약된 체험',
+      value: '8건',
+      change: '+3건',
       icon: Calendar,
-      trend: "up",
+      trend: 'up',
     },
   ]
 
   const recentOrders = [
     {
-      id: "ORD-001234",
-      product: "유기농 방울토마토",
-      customer: "김**",
+      id: 'ORD-001234',
+      product: '유기농 방울토마토',
+      customer: '김**',
       amount: 17000,
-      status: "배송 준비",
-      date: "2024.12.10",
+      status: '배송 준비',
+      date: '2024.12.10',
     },
     {
-      id: "ORD-001233",
-      product: "유기농 방울토마토",
-      customer: "이**",
+      id: 'ORD-001233',
+      product: '유기농 방울토마토',
+      customer: '이**',
       amount: 8500,
-      status: "배송 중",
-      date: "2024.12.09",
+      status: '배송 중',
+      date: '2024.12.09',
     },
     {
-      id: "ORD-001232",
-      product: "유기농 방울토마토",
-      customer: "박**",
+      id: 'ORD-001232',
+      product: '유기농 방울토마토',
+      customer: '박**',
       amount: 25500,
-      status: "배송 완료",
-      date: "2024.12.08",
+      status: '배송 완료',
+      date: '2024.12.08',
     },
   ]
 
   const upcomingExperiences = [
     {
-      id: "EXP-001234",
-      title: "딸기 수확 체험",
-      date: "2024.12.15",
-      time: "10:00",
+      id: 'EXP-001234',
+      title: '딸기 수확 체험',
+      date: '2024.12.15',
+      time: '10:00',
       participants: 6,
-      status: "확정",
+      status: '확정',
     },
     {
-      id: "EXP-001233",
-      title: "딸기 수확 체험",
-      date: "2024.12.17",
-      time: "14:00",
+      id: 'EXP-001233',
+      title: '딸기 수확 체험',
+      date: '2024.12.17',
+      time: '14:00',
       participants: 4,
-      status: "확정",
+      status: '확정',
     },
   ]
 
   const products = [
     {
       id: 1,
-      name: "유기농 방울토마토",
+      name: '유기농 방울토마토',
       price: 8500,
       stock: 50,
-      status: "판매중",
+      status: '판매중',
       sales: 124,
     },
     {
       id: 2,
-      name: "무농약 상추",
+      name: '무농약 상추',
       price: 5000,
       stock: 0,
-      status: "품절",
+      status: '품절',
       sales: 89,
     },
   ]
@@ -184,7 +184,7 @@ export default function FarmerDashboardPage() {
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/farmer/experiences/new">
+              <Link href="/farmer/experiences">
                 <Plus className="h-4 w-4 mr-2" />
                 체험 등록
               </Link>
@@ -197,10 +197,12 @@ export default function FarmerDashboardPage() {
           {stats.map((stat, index) => (
             <Card key={index} className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center`}>
+                <div
+                  className={`w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center`}
+                >
                   <stat.icon className="h-6 w-6 text-primary" />
                 </div>
-                {stat.trend === "up" && (
+                {stat.trend === 'up' && (
                   <Badge variant="secondary" className="bg-green-50 text-green-700">
                     <TrendingUp className="h-3 w-3 mr-1" />
                     {stat.change}
@@ -226,17 +228,20 @@ export default function FarmerDashboardPage() {
             </div>
             <div className="space-y-4">
               {recentOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between pb-4 border-b last:border-0">
+                <div
+                  key={order.id}
+                  className="flex items-center justify-between pb-4 border-b last:border-0"
+                >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-medium">{order.product}</p>
                       <Badge
                         variant={
-                          order.status === "배송 완료"
-                            ? "secondary"
-                            : order.status === "배송 중"
-                              ? "default"
-                              : "outline"
+                          order.status === '배송 완료'
+                            ? 'secondary'
+                            : order.status === '배송 중'
+                              ? 'default'
+                              : 'outline'
                         }
                       >
                         {order.status}
@@ -257,12 +262,15 @@ export default function FarmerDashboardPage() {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold">예정된 체험</h2>
               <Button variant="outline" size="sm" asChild>
-                <Link href="/farmer/experiences">전체보기</Link>
+                <Link href="/farmer/bookings">전체보기</Link>
               </Button>
             </div>
             <div className="space-y-4">
               {upcomingExperiences.map((exp) => (
-                <div key={exp.id} className="flex items-center justify-between pb-4 border-b last:border-0">
+                <div
+                  key={exp.id}
+                  className="flex items-center justify-between pb-4 border-b last:border-0"
+                >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-medium">{exp.title}</p>
@@ -312,11 +320,15 @@ export default function FarmerDashboardPage() {
                     <td className="py-4 px-4 font-medium">{product.name}</td>
                     <td className="py-4 px-4">{product.price.toLocaleString()}원</td>
                     <td className="py-4 px-4">
-                      <span className={product.stock === 0 ? "text-destructive" : ""}>{product.stock}개</span>
+                      <span className={product.stock === 0 ? 'text-destructive' : ''}>
+                        {product.stock}개
+                      </span>
                     </td>
                     <td className="py-4 px-4">{product.sales}건</td>
                     <td className="py-4 px-4">
-                      <Badge variant={product.status === "판매중" ? "default" : "secondary"}>{product.status}</Badge>
+                      <Badge variant={product.status === '판매중' ? 'default' : 'secondary'}>
+                        {product.status}
+                      </Badge>
                     </td>
                     <td className="py-4 px-4 text-right">
                       <Button variant="ghost" size="sm">

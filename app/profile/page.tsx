@@ -25,12 +25,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Header } from '@/components/layout/header'
 import { useRouter } from 'next/navigation'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -38,10 +33,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/hooks/use-toast'
+import { Store } from 'lucide-react'
+import { getAccessToken, setAccessToken } from '@/lib/api/client'
+import { authService } from '@/lib/api/services/auth'
+import { useCartStore } from '@/lib/cart-store'
 
 export default function ProfilePage() {
   const router = useRouter()
+  const { toast } = useToast()
+  const clearCart = useCartStore((state) => state.clearCart)
   const [activeTab, setActiveTab] = useState('overview')
+  const [isSellerDialogOpen, setIsSellerDialogOpen] = useState(false)
+  const [sellerApplication, setSellerApplication] = useState({
+    farmName: '',
+    farmAddress: '',
+    farmDescription: '',
+    businessNumber: '',
+  })
 
   const user = {
     name: '김**',
@@ -49,6 +68,85 @@ export default function ProfilePage() {
     phone: '010-1234-5678',
     joinDate: '2024.01.15',
     avatar: '/placeholder.svg',
+    role: 'BUYER', // BUYER or SELLER
+  }
+
+  const handleSellerApplication = async () => {
+    if (!sellerApplication.farmName || !sellerApplication.farmAddress) {
+      toast({
+        title: '필수 항목 입력',
+        description: '농장명과 주소를 입력해주세요.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    try {
+      // TODO: API 연동
+      // await authService.requestSellerRole(sellerApplication)
+      toast({
+        title: '판매자 전환 신청 완료',
+        description: '판매자 전환 신청이 완료되었습니다. 검토 후 승인됩니다.',
+      })
+      setIsSellerDialogOpen(false)
+      setSellerApplication({
+        farmName: '',
+        farmAddress: '',
+        farmDescription: '',
+        businessNumber: '',
+      })
+    } catch (error) {
+      toast({
+        title: '신청 실패',
+        description: '판매자 전환 신청 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      // API 로그아웃 시도 (실패해도 계속 진행)
+      try {
+        await authService.logout()
+      } catch (error) {
+        console.warn('로그아웃 API 호출 실패 (로컬 로그아웃 진행):', error)
+      }
+
+      // 로컬 스토리지 정리
+      setAccessToken(null)
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('dummyUser')
+        localStorage.removeItem('accessToken')
+      }
+
+      // 장바구니 비우기 (에러가 나도 계속 진행)
+      try {
+        clearCart()
+      } catch (error) {
+        console.warn('장바구니 비우기 실패 (계속 진행):', error)
+      }
+
+      // 이벤트 발생 (다른 컴포넌트에 알림)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('authStateChanged'))
+      }
+
+      toast({
+        title: '로그아웃되었습니다',
+        description: '다음에 또 만나요!',
+      })
+
+      // 홈으로 리다이렉트
+      router.push('/')
+    } catch (error) {
+      console.error('로그아웃 중 오류 발생:', error)
+      toast({
+        title: '로그아웃 실패',
+        description: '다시 시도해주세요.',
+        variant: 'destructive',
+      })
+    }
   }
 
   const stats = [
@@ -145,10 +243,11 @@ export default function ProfilePage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">개요</TabsTrigger>
             <TabsTrigger value="orders">주문 내역</TabsTrigger>
             <TabsTrigger value="favorites">찜한 상품</TabsTrigger>
+            <TabsTrigger value="role">역할 관리</TabsTrigger>
             <TabsTrigger value="settings">설정</TabsTrigger>
           </TabsList>
 
@@ -231,9 +330,7 @@ export default function ProfilePage() {
                         <span className="font-semibold">{order.id}</span>
                         {getStatusBadge(order.status)}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {order.items.join(', ')}
-                      </div>
+                      <div className="text-sm text-muted-foreground">{order.items.join(', ')}</div>
                       <div className="text-sm text-muted-foreground">{order.date}</div>
                     </div>
                     <div className="text-right">
@@ -279,6 +376,167 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* Role Management Tab */}
+          <TabsContent value="role" className="space-y-6">
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">역할 관리</h2>
+              <div className="space-y-6">
+                <div className="flex items-start gap-4 p-4 border rounded-lg">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <ShoppingBag className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold">구매자</h3>
+                      {user.role === 'BUYER' && <Badge variant="default">현재 역할</Badge>}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      농산물을 구매하고 농장 체험을 예약할 수 있습니다.
+                    </p>
+                    <ul className="text-sm space-y-1 text-muted-foreground">
+                      <li>• 상품 구매 및 주문 관리</li>
+                      <li>• 체험 예약</li>
+                      <li>• 리뷰 작성</li>
+                      <li>• 찜하기 및 장바구니</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 border rounded-lg">
+                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <Store className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold">판매자 (농가)</h3>
+                      {user.role === 'SELLER' && <Badge variant="default">현재 역할</Badge>}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      농산물을 판매하고 농장 체험 프로그램을 운영할 수 있습니다.
+                    </p>
+                    <ul className="text-sm space-y-1 text-muted-foreground mb-4">
+                      <li>• 상품 등록 및 판매</li>
+                      <li>• 체험 프로그램 등록</li>
+                      <li>• 주문 및 예약 관리</li>
+                      <li>• 농장 정보 관리</li>
+                      <li>• 매출 및 정산 관리</li>
+                    </ul>
+                    {user.role === 'BUYER' && (
+                      <Dialog open={isSellerDialogOpen} onOpenChange={setIsSellerDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button>
+                            <Store className="h-4 w-4 mr-2" />
+                            판매자로 전환
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>판매자 전환 신청</DialogTitle>
+                            <DialogDescription>
+                              농장 정보를 입력하고 판매자 계정으로 전환하세요
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="farmName">농장명 *</Label>
+                              <Input
+                                id="farmName"
+                                placeholder="햇살농장"
+                                value={sellerApplication.farmName}
+                                onChange={(e) =>
+                                  setSellerApplication({
+                                    ...sellerApplication,
+                                    farmName: e.target.value,
+                                  })
+                                }
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="farmAddress">농장 주소 *</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  id="farmAddress"
+                                  placeholder="경기도 양평군 양평읍 농장길 123"
+                                  value={sellerApplication.farmAddress}
+                                  onChange={(e) =>
+                                    setSellerApplication({
+                                      ...sellerApplication,
+                                      farmAddress: e.target.value,
+                                    })
+                                  }
+                                  required
+                                />
+                                <Button variant="outline" type="button">
+                                  주소 검색
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="farmDescription">농장 소개</Label>
+                              <Textarea
+                                id="farmDescription"
+                                placeholder="농장에 대한 간단한 소개를 작성해주세요"
+                                value={sellerApplication.farmDescription}
+                                onChange={(e) =>
+                                  setSellerApplication({
+                                    ...sellerApplication,
+                                    farmDescription: e.target.value,
+                                  })
+                                }
+                                rows={4}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="businessNumber">사업자 등록번호 (선택)</Label>
+                              <Input
+                                id="businessNumber"
+                                placeholder="123-45-67890"
+                                value={sellerApplication.businessNumber}
+                                onChange={(e) =>
+                                  setSellerApplication({
+                                    ...sellerApplication,
+                                    businessNumber: e.target.value,
+                                  })
+                                }
+                              />
+                              <p className="text-sm text-muted-foreground">
+                                사업자 등록번호가 있으면 입력해주세요. 없어도 신청 가능합니다.
+                              </p>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsSellerDialogOpen(false)}>
+                              취소
+                            </Button>
+                            <Button onClick={handleSellerApplication}>신청하기</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                    {user.role === 'SELLER' && (
+                      <div className="flex gap-2">
+                        <Button asChild>
+                          <Link href="/farmer/dashboard">판매자 대시보드로 이동</Link>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-4 bg-muted rounded-lg">
+                  <h4 className="font-semibold mb-2">안내사항</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• 판매자 전환 신청 후 검토가 진행됩니다.</li>
+                    <li>• 승인까지 1-3 영업일이 소요될 수 있습니다.</li>
+                    <li>• 판매자로 전환하더라도 구매자 기능은 계속 사용할 수 있습니다.</li>
+                    <li>• 판매자 계정은 농장 정보 검증 후 활성화됩니다.</li>
+                  </ul>
+                </div>
               </div>
             </Card>
           </TabsContent>
@@ -419,7 +677,11 @@ export default function ProfilePage() {
                   <Settings className="h-4 w-4 mr-2" />
                   비밀번호 변경
                 </Button>
-                <Button variant="destructive" className="w-full justify-start">
+                <Button
+                  variant="destructive"
+                  className="w-full justify-start"
+                  onClick={handleLogout}
+                >
                   <LogOut className="h-4 w-4 mr-2" />
                   로그아웃
                 </Button>
@@ -431,4 +693,3 @@ export default function ProfilePage() {
     </div>
   )
 }
-

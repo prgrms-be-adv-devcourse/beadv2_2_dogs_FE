@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Sprout } from 'lucide-react'
+import { Sprout, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
+import { authService } from '@/lib/api/services/auth'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -22,14 +23,110 @@ export default function SignupPage() {
     confirmPassword: '',
     phone: '',
   })
+  const [verificationCode, setVerificationCode] = useState('')
+  const [isVerificationSent, setIsVerificationSent] = useState(false)
+  const [isEmailVerified, setIsEmailVerified] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+    // 이메일 변경 시 인증 상태 초기화
+    if (e.target.name === 'email') {
+      setIsVerificationSent(false)
+      setIsEmailVerified(false)
+      setVerificationCode('')
+    }
+  }
+
+  const handleRequestVerification = async () => {
+    if (!formData.email) {
+      toast({
+        title: '이메일 입력 필요',
+        description: '이메일 주소를 입력해주세요.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // 이메일 형식 검증
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      toast({
+        title: '이메일 형식 오류',
+        description: '올바른 이메일 주소를 입력해주세요.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      await authService.requestEmailVerification(formData.email)
+      setIsVerificationSent(true)
+      toast({
+        title: '인증 코드 발송',
+        description: '이메일로 인증 코드를 발송했습니다.',
+      })
+    } catch (error) {
+      toast({
+        title: '인증 코드 발송 실패',
+        description: '인증 코드 발송 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleVerifyCode = async () => {
+    if (!verificationCode) {
+      toast({
+        title: '인증 코드 입력 필요',
+        description: '인증 코드를 입력해주세요.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsVerifying(true)
+    try {
+      const result = await authService.verifyEmailCode(formData.email, verificationCode)
+      if (result.verified) {
+        setIsEmailVerified(true)
+        toast({
+          title: '이메일 인증 완료',
+          description: '이메일 인증이 완료되었습니다.',
+        })
+      } else {
+        toast({
+          title: '인증 실패',
+          description: '인증 코드가 일치하지 않습니다.',
+          variant: 'destructive',
+        })
+      }
+    } catch (error) {
+      toast({
+        title: '인증 실패',
+        description: '인증 코드 확인 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsVerifying(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!isEmailVerified) {
+      toast({
+        title: '이메일 인증 필요',
+        description: '이메일 인증을 완료해주세요.',
+        variant: 'destructive',
+      })
+      return
+    }
 
     if (formData.password !== formData.confirmPassword) {
       toast({
@@ -43,17 +140,18 @@ export default function SignupPage() {
     setIsLoading(true)
 
     try {
-      // TODO: Implement signup logic with backend API
-      console.log('[v0] Signup attempt:', formData)
-      
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      
+      await authService.signup({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+        phone: formData.phone,
+      })
+
       toast({
         title: '회원가입 완료',
         description: '회원가입이 완료되었습니다. 로그인해주세요.',
       })
-      
+
       router.push('/login')
     } catch (error) {
       toast({
@@ -95,16 +193,63 @@ export default function SignupPage() {
 
             <div className="space-y-2">
               <Label htmlFor="email">이메일</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="example@email.com"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="example@email.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={isEmailVerified}
+                  required
+                  className={isEmailVerified ? 'flex-1' : 'flex-1'}
+                />
+                {!isEmailVerified && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleRequestVerification}
+                    disabled={isLoading || !formData.email}
+                  >
+                    {isVerificationSent ? '재발송' : '인증'}
+                  </Button>
+                )}
+                {isEmailVerified && (
+                  <Button type="button" variant="outline" disabled className="text-green-600">
+                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                    인증완료
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {isVerificationSent && !isEmailVerified && (
+              <div className="space-y-2">
+                <Label htmlFor="verificationCode">인증 코드</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="verificationCode"
+                    type="text"
+                    placeholder="인증 코드 6자리"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                    maxLength={6}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleVerifyCode}
+                    disabled={isVerifying || !verificationCode}
+                  >
+                    확인
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  이메일로 발송된 6자리 인증 코드를 입력해주세요.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="phone">전화번호</Label>
