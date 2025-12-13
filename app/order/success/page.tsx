@@ -29,24 +29,15 @@ export default function OrderSuccessPage() {
         // HTML 예시의 success.html 참고
         // 토스페이먼츠가 URL에 자동으로 추가한 파라미터 사용
         const paymentAmount = amount ? parseInt(amount) : 0
-        const payload = {
+
+        console.log('[OrderSuccess] 결제 승인 API 호출:', {
           paymentKey,
           orderId,
           amount: paymentAmount,
-        }
-
-        // 백엔드 API 호출
-        const response = await fetch('/api/v1/payments/confirm', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
         })
 
-        if (!response.ok) {
-          throw new Error(`결제 승인 실패: ${response.status}`)
-        }
-
-        const data = await response.json()
+        // paymentService를 사용하여 결제 승인 API 호출
+        const data = await paymentService.confirmPayment(paymentKey, orderId, paymentAmount)
 
         // 결제 승인 성공
         toast({

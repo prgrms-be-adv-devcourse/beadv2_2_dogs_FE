@@ -263,13 +263,53 @@ export const useCartStore = create<CartStore>()(
       },
 
       getCheckoutItems: () => {
-        const items = get().items
+        let items = get().items
         console.log(
-          '[CartStore] getCheckoutItems - raw items:',
+          '[CartStore] getCheckoutItems - raw items from Zustand:',
           JSON.stringify(
             items.map((i) => ({ id: i.id, quantity: i.quantity, isBuyNow: i.isBuyNow }))
           )
         )
+
+        // Zustand가 복원하지 못한 경우 localStorage에서 직접 읽기
+        if (items.length === 0 && typeof window !== 'undefined') {
+          const stored = localStorage.getItem('barofarm-cart')
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored) as {
+                state?: {
+                  items?: Array<{ id: number; isBuyNow?: boolean; [key: string]: unknown }>
+                }
+              }
+              const storedItems = parsed.state?.items
+              if (storedItems && storedItems.length > 0) {
+                console.log(
+                  '[CartStore] getCheckoutItems - Zustand 복원 실패 감지, localStorage에서 직접 읽기'
+                )
+                // localStorage에서 읽은 아이템을 CartItem 형식으로 변환
+                items = storedItems.map((item) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const rawIsBuyNow = (item as any).isBuyNow
+                  const isBuyNowValue =
+                    rawIsBuyNow === true || rawIsBuyNow === 'true' || rawIsBuyNow === 1
+                  return {
+                    ...item,
+                    isBuyNow: isBuyNowValue,
+                  } as CartItem
+                })
+                console.log(
+                  '[CartStore] getCheckoutItems - localStorage items:',
+                  JSON.stringify(
+                    items.map((i) => ({ id: i.id, quantity: i.quantity, isBuyNow: i.isBuyNow }))
+                  )
+                )
+              }
+            } catch (e) {
+              console.error('[CartStore] getCheckoutItems - localStorage 파싱 에러:', e)
+            }
+          }
+        }
+
         const buyNowItems = items.filter((item) => item.isBuyNow === true)
         console.log(
           '[CartStore] getCheckoutItems - buyNowItems after filter:',

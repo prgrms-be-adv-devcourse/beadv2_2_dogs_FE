@@ -12,7 +12,7 @@ import Image from 'next/image'
 import { Header } from '@/components/layout/header'
 import { useCartStore } from '@/lib/cart-store'
 import { useAddressStore } from '@/lib/address-store'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { orderService } from '@/lib/api/services/order'
 import {
@@ -29,8 +29,16 @@ import { Checkbox } from '@/components/ui/checkbox'
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, getCheckoutItems, getCheckoutTotalPrice, clearBuyNowItems, restoreBuyNowItems } =
-    useCartStore()
+  const searchParams = useSearchParams()
+  const isBuyNow = searchParams.get('buyNow') === 'true'
+  const {
+    items,
+    getCheckoutItems,
+    getCheckoutTotalPrice,
+    clearBuyNowItems,
+    restoreBuyNowItems,
+    setState,
+  } = useCartStore()
   const { addresses, selectedAddressId, addAddress, updateAddress, deleteAddress, selectAddress } =
     useAddressStore()
   const { toast } = useToast()
@@ -182,6 +190,73 @@ export default function CheckoutPage() {
     }
   }, [useSavedAddress, addresses])
 
+  // localStorage에서 바로 구매 아이템을 강제로 복원 (Zustand persist가 복원하지 못한 경우 대비)
+  useEffect(() => {
+    if (!mounted) return
+
+    const forceRestoreFromLocalStorage = () => {
+      if (typeof window === 'undefined') return
+
+      const stored = localStorage.getItem('barofarm-cart')
+      if (!stored) return
+
+      try {
+        const parsed = JSON.parse(stored) as {
+          state?: { items?: Array<{ id: number; isBuyNow?: boolean; [key: string]: any }> }
+        }
+        const storedItems = parsed.state?.items
+        if (!storedItems || storedItems.length === 0) return
+
+        // 바로 구매 아이템이 있는지 확인
+        const buyNowItems = storedItems.filter(
+          (i) => i.isBuyNow === true || i.isBuyNow === 'true' || i.isBuyNow === 1
+        )
+
+        if (buyNowItems.length > 0 && items.length === 0) {
+          console.log('[Checkout] Zustand 복원 실패 감지, localStorage에서 강제 복원 시도')
+          console.log('[Checkout] localStorage items:', storedItems)
+          console.log('[Checkout] 현재 Zustand items:', items)
+
+          // Zustand store에 직접 설정 (임시 방편)
+          // 실제로는 Zustand persist가 자동으로 복원해야 하지만, 복원이 실패한 경우를 대비
+          // useCartStore.getState()를 사용하여 직접 업데이트
+          const cartStore = useCartStore.getState()
+          if (cartStore && typeof cartStore === 'object' && 'setState' in cartStore) {
+            // Zustand의 내부 API를 사용하여 상태 업데이트
+            // 하지만 이는 권장되지 않으므로, 대신 localStorage에서 직접 읽어서 표시하는 방법 사용
+            console.log(
+              '[Checkout] Zustand store 직접 업데이트는 불가능, localStorage에서 직접 읽기로 전환'
+            )
+          }
+        }
+      } catch (e) {
+        console.error('[Checkout] localStorage 강제 복원 중 에러:', e)
+      }
+    }
+
+    // 즉시 확인
+    forceRestoreFromLocalStorage()
+
+    // 주기적으로 확인 (Zustand가 복원할 때까지)
+    const intervalId = setInterval(() => {
+      if (items.length > 0) {
+        clearInterval(intervalId)
+        return
+      }
+      forceRestoreFromLocalStorage()
+    }, 100)
+
+    // 최대 2초 후 정리
+    const timeoutId = setTimeout(() => {
+      clearInterval(intervalId)
+    }, 2000)
+
+    return () => {
+      clearInterval(intervalId)
+      clearTimeout(timeoutId)
+    }
+  }, [mounted, items.length])
+
   // 체크아웃 페이지를 벗어날 때 원래 수량으로 복원
   useEffect(() => {
     return () => {
@@ -191,16 +266,206 @@ export default function CheckoutPage() {
   }, [restoreBuyNowItems])
 
   // 체크아웃 아이템이 없으면 장바구니로 리다이렉트 (렌더링 중 router.push 방지)
+  // 바로 구매 모드(buyNow=true)인 경우 더 오래 대기
   useEffect(() => {
-    if (mounted) {
+    if (!mounted) {
+      setIsLoadingItems(false) // 마운트되지 않았으면 로딩 종료
+      return
+    }
+
+    let redirectTimeout: NodeJS.Timeout | null = null
+    let checkCount = 0
+    let intervalId: NodeJS.Timeout | null = null
+    let isCleanedUp = false // cleanup 플래그
+    let hasBuyNowInStorage = false // localStorage에 바로 구매 아이템이 있는지 플래그
+    // 바로 구매 모드인 경우 더 오래 대기 (최대 3초)
+    const maxChecks = isBuyNow ? 30 : 10
+
+    // localStorage에서 바로 구매 아이템이 복원되는 시간을 기다림
+    const checkItems = () => {
+      if (isCleanedUp) return true // cleanup 후에는 실행하지 않음
+
+      checkCount++
       const checkoutItems = getCheckoutItems()
+      console.log('[Checkout] Checking items:', {
+        isBuyNow,
+        checkCount,
+        maxChecks,
+        checkoutItemsLength: checkoutItems.length,
+        itemsLength: items.length,
+        hasBuyNowInStorage,
+      })
+
+      // 아이템이 있으면 리다이렉트 취소 및 인터벌 정리
+      if (checkoutItems.length > 0 || items.length > 0) {
+        if (redirectTimeout) {
+          clearTimeout(redirectTimeout)
+          redirectTimeout = null
+        }
+        if (intervalId) {
+          clearInterval(intervalId)
+          intervalId = null
+        }
+        setIsLoadingItems(false) // 로딩 완료
+        isCleanedUp = true // cleanup 플래그 설정
+        console.log('[Checkout] Items found, staying on checkout page')
+        return true // 아이템이 있음을 반환
+      }
+
       // 아이템이 없고, 일반 장바구니 아이템도 없으면 리다이렉트
+      // 단, 바로 구매 아이템이 localStorage에 있을 수 있으므로 약간의 지연 후 확인
       if (checkoutItems.length === 0 && items.length === 0) {
+        // localStorage에서 직접 확인 (Zustand persist가 아직 복원하지 않았을 수 있음)
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('barofarm-cart')
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored) as {
+                state?: { items?: Array<{ id: number; isBuyNow?: boolean }> }
+              }
+              const buyNowItems = parsed.state?.items?.filter(
+                (i) => i.isBuyNow === true || i.isBuyNow === 'true' || i.isBuyNow === 1
+              )
+              // 바로 구매 아이템이 있으면 리다이렉트하지 않음 (Zustand가 곧 복원할 것)
+              if (buyNowItems && buyNowItems.length > 0) {
+                hasBuyNowInStorage = true // 플래그 설정
+                console.log(
+                  '[Checkout] Buy now items found in localStorage, waiting for Zustand restore...',
+                  {
+                    checkCount,
+                    maxChecks,
+                    isBuyNow,
+                    buyNowItemsCount: buyNowItems.length,
+                    buyNowItems: buyNowItems.map((i) => ({ id: i.id, isBuyNow: i.isBuyNow })),
+                  }
+                )
+                // localStorage에 바로 구매 아이템이 있으면 최대 체크 횟수에 도달해도 계속 대기
+                // (최대 대기 시간까지는 대기)
+                return false // 계속 대기
+              } else {
+                hasBuyNowInStorage = false // 플래그 해제
+              }
+            } catch (e) {
+              console.error('[Checkout] Error parsing localStorage:', e)
+              hasBuyNowInStorage = false
+            }
+          } else {
+            hasBuyNowInStorage = false
+          }
+        }
+
+        // localStorage에 바로 구매 아이템이 없고 최대 체크 횟수에 도달했으면 장바구니로 리다이렉트
+        if (checkCount >= maxChecks && !hasBuyNowInStorage) {
+          console.log('[Checkout] No items found after max checks, redirecting to cart...')
+          setIsLoadingItems(false) // 로딩 완료 (리다이렉트 예정)
+          isCleanedUp = true // cleanup 플래그 설정
+          // 인터벌 정리
+          if (intervalId) {
+            clearInterval(intervalId)
+            intervalId = null
+          }
+          // 리다이렉트를 약간 지연시켜서 여러 번 실행되는 것을 방지
+          if (!redirectTimeout) {
+            redirectTimeout = setTimeout(() => {
+              router.push('/cart')
+            }, 100)
+          }
+          return true // 리다이렉트 예정
+        }
+      }
+
+      return false // 계속 체크 필요
+    }
+
+    // 즉시 확인
+    const immediateResult = checkItems()
+    if (immediateResult === true) {
+      // 아이템이 있으면 더 이상 체크하지 않음
+      // setIsLoadingItems는 이미 checkItems() 내부에서 호출됨
+      return
+    }
+    // immediateResult가 false면 계속 체크 필요 (localStorage에 바로 구매 아이템이 있을 수 있음)
+
+    // Zustand persist가 localStorage를 복원하는 시간을 고려하여 주기적으로 재확인
+    // 바로 구매 모드인 경우 더 자주 체크
+    const checkInterval = isBuyNow ? 50 : 100
+    intervalId = setInterval(() => {
+      const result = checkItems()
+      if (result === true) {
+        // 아이템이 있거나 리다이렉트 예정이면 인터벌 정리
+        if (intervalId) {
+          clearInterval(intervalId)
+          intervalId = null
+        }
+      }
+    }, checkInterval)
+
+    // 최대 대기 시간 후 정리 (무한 로딩 방지) - 반드시 실행됨
+    const maxWaitTimeout = setTimeout(() => {
+      if (isCleanedUp) return // 이미 cleanup 되었으면 실행하지 않음
+
+      console.log('[Checkout] 최대 대기 시간 도달, 로딩 종료 (무한 로딩 방지)')
+      setIsLoadingItems(false) // 무한 로딩 방지 - 반드시 로딩 종료
+      isCleanedUp = true // cleanup 플래그 설정
+
+      if (intervalId) {
+        clearInterval(intervalId)
+        intervalId = null
+      }
+      if (redirectTimeout) {
+        clearTimeout(redirectTimeout)
+        redirectTimeout = null
+      }
+
+      // 최종 확인: localStorage에 바로 구매 아이템이 있는지 다시 확인
+      let finalHasBuyNow = false
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('barofarm-cart')
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored) as {
+              state?: { items?: Array<{ id: number; isBuyNow?: boolean }> }
+            }
+            const buyNowItems = parsed.state?.items?.filter(
+              (i) => i.isBuyNow === true || i.isBuyNow === 'true' || i.isBuyNow === 1
+            )
+            if (buyNowItems && buyNowItems.length > 0) {
+              finalHasBuyNow = true
+            }
+          } catch (e) {
+            console.error('[Checkout] 최종 확인 중 에러:', e)
+          }
+        }
+      }
+
+      // 아이템이 여전히 없고 localStorage에도 바로 구매 아이템이 없으면 장바구니로 리다이렉트
+      const finalCheckoutItems = getCheckoutItems()
+      if (finalCheckoutItems.length === 0 && items.length === 0 && !finalHasBuyNow) {
+        console.log('[Checkout] 최대 대기 시간 후에도 아이템 없음, 장바구니로 리다이렉트')
         router.push('/cart')
+      } else if (finalHasBuyNow) {
+        console.log(
+          '[Checkout] 최대 대기 시간 도달했지만 localStorage에 바로 구매 아이템 있음, 페이지 유지'
+        )
+        // 페이지를 유지하고 사용자에게 알림
+        toast({
+          title: '주문 정보를 불러오는 중',
+          description: '잠시만 기다려주세요...',
+        })
+      }
+    }, maxChecks * 100)
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId)
+      }
+      clearTimeout(maxWaitTimeout)
+      if (redirectTimeout) {
+        clearTimeout(redirectTimeout)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, router, items.length])
+  }, [mounted, isBuyNow])
 
   const [formData, setFormData] = useState({
     name: '',
@@ -215,6 +480,7 @@ export default function CheckoutPage() {
 
   // 체크아웃에 표시할 아이템과 총 가격 (클라이언트에서만 계산)
   const checkoutItems = mounted ? getCheckoutItems() : []
+  const [isLoadingItems, setIsLoadingItems] = useState(true)
   const totalPrice = mounted ? getCheckoutTotalPrice() : 0
   const deliveryFee = 0 // 무료 배송
   const finalPrice = totalPrice + deliveryFee
@@ -461,11 +727,24 @@ export default function CheckoutPage() {
   }
 
   // 체크아웃 아이템이 없으면 로딩 표시 (useEffect에서 리다이렉트 처리)
-  if (!mounted || checkoutItems.length === 0) {
+  if (!mounted || isLoadingItems) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground">로딩 중...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">주문 정보를 불러오는 중...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 아이템이 없으면 장바구니로 리다이렉트 (useEffect에서 처리하지 못한 경우)
+  if (checkoutItems.length === 0 && items.length === 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">주문할 상품이 없습니다.</p>
+          <Button onClick={() => router.push('/cart')}>장바구니로 이동</Button>
         </div>
       </div>
     )

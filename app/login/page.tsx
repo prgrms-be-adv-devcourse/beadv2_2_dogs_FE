@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { authService } from '@/lib/api/services/auth'
 import { getErrorMessage, getErrorTitle } from '@/lib/utils/error-handler'
+import { setAccessToken } from '@/lib/api/client'
 
 export default function LoginPage() {
   const router = useRouter()
