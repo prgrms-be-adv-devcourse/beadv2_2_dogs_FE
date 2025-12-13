@@ -60,12 +60,12 @@ export const authService = {
     return authApi.post('/api/auth/password/reset/confirm', data)
   },
 
-  // 비밀번호 변경 (Gateway를 통해 접근: POST /api/auth/password/change)
-  async changePassword(data: { currentPassword: string; newPassword: string }): Promise<void> {
-    return authApi.post('/api/auth/password/change', data)
-  },
+  // 이메일 인증 코드 요청
+  // async requestEmailVerification(email: string): Promise<void> {
+  //   return authApi.post('/api/auth/email/verification-request', { email })
+  // },
 
-  // 이메일 인증코드 발송 (Gateway를 통해 접근: POST /api/auth/verification/email/send-code)
+  // 이메일 인증 코드 요청 (send-code)
   async requestEmailVerification(email: string): Promise<void> {
     return authApi.post('/api/auth/verification/email/send-code', { email })
   },
