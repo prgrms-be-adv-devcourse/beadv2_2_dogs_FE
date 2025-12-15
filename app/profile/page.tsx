@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -54,7 +54,9 @@ import { useAddressStore } from '@/lib/address-store'
 import { AddressDialog } from '@/components/address/address-dialog'
 import { sellerService } from '@/lib/api/services/seller'
 import { depositService } from '@/lib/api/services/payment'
-import { useEffect } from 'react'
+import { orderService } from '@/lib/api/services/order'
+import { reviewService } from '@/lib/api/services/review'
+import type { MeResponse, OrderDetailInfo } from '@/lib/api/types'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -65,11 +67,14 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [isSellerDialogOpen, setIsSellerDialogOpen] = useState(false)
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false)
+  const [isDepositChargeDialogOpen, setIsDepositChargeDialogOpen] = useState(false)
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null)
   const [monthlySettlement, setMonthlySettlement] = useState<number | null>(null)
   const [isLoadingSettlement, setIsLoadingSettlement] = useState(false)
   const [depositBalance, setDepositBalance] = useState<number | null>(null)
   const [isLoadingDeposit, setIsLoadingDeposit] = useState(false)
+  const [chargeAmount, setChargeAmount] = useState<string>('')
+  const [isCharging, setIsCharging] = useState(false)
   const [sellerApplication, setSellerApplication] = useState({
     farmName: '',
     farmAddress: '',
@@ -77,14 +82,25 @@ export default function ProfilePage() {
     businessNumber: '',
   })
 
-  const user = {
-    name: '김**',
-    email: 'user@example.com',
-    phone: '010-1234-5678',
-    joinDate: '2024.01.15',
-    avatar: '/placeholder.svg',
-    role: 'BUYER', // BUYER or SELLER
-  }
+  // 실제 API에서 가져온 사용자 정보
+  const [user, setUser] = useState<MeResponse & { name?: string; phone?: string; avatar?: string }>(
+    {
+      userId: '',
+      email: '',
+      role: 'BUYER',
+    }
+  )
+  const [isLoadingUser, setIsLoadingUser] = useState(true)
+  const [mounted, setMounted] = useState(false)
+
+  // 주문 내역 상태
+  const [orders, setOrders] = useState<OrderDetailInfo[]>([])
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false)
+  const [orderCount, setOrderCount] = useState(0)
+
+  // 리뷰 개수 상태
+  const [reviewCount, setReviewCount] = useState(0)
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false)
 
   const handleSellerApplication = async () => {
     if (!sellerApplication.farmName || !sellerApplication.farmAddress) {
@@ -97,12 +113,14 @@ export default function ProfilePage() {
     }
 
     try {
-      // TODO: API 연동
-      // await authService.requestSellerRole(sellerApplication)
+      // grantSellerRole API 호출 (현재 사용자의 userId로 판매자 권한 부여)
+      await authService.grantSellerRole(user.userId)
+
       toast({
-        title: '판매자 전환 신청 완료',
-        description: '판매자 전환 신청이 완료되었습니다. 검토 후 승인됩니다.',
+        title: '판매자 전환 완료',
+        description: '판매자 권한이 부여되었습니다. 페이지를 새로고침합니다.',
       })
+
       setIsSellerDialogOpen(false)
       setSellerApplication({
         farmName: '',
@@ -110,10 +128,25 @@ export default function ProfilePage() {
         farmDescription: '',
         businessNumber: '',
       })
-    } catch (error) {
+
+      // 사용자 정보 다시 조회하여 역할 업데이트
+      const updatedUser = await authService.getCurrentUser()
+      setUser({
+        ...updatedUser,
+        name: updatedUser.email?.split('@')[0] || '사용자',
+        phone: '',
+        avatar: '/placeholder.svg',
+      })
+
+      // 페이지 새로고침
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
+    } catch (error: any) {
+      console.error('판매자 전환 실패:', error)
       toast({
         title: '신청 실패',
-        description: '판매자 전환 신청 중 오류가 발생했습니다.',
+        description: error?.message || '판매자 전환 신청 중 오류가 발생했습니다.',
         variant: 'destructive',
       })
     }
@@ -164,10 +197,89 @@ export default function ProfilePage() {
     }
   }
 
+  // 마운트 확인
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // 사용자 정보 조회
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!mounted) return
+
+      setIsLoadingUser(true)
+      try {
+        const currentUser = await authService.getCurrentUser()
+        console.log('현재 사용자 정보:', currentUser)
+        setUser({
+          ...currentUser,
+          name: currentUser.email?.split('@')[0] || '사용자', // 이메일에서 이름 추출 (임시)
+          phone: '', // TODO: 전화번호는 별도 API에서 가져와야 할 수 있음
+          avatar: '/placeholder.svg',
+        })
+      } catch (error) {
+        console.error('사용자 정보 조회 실패:', error)
+        toast({
+          title: '사용자 정보 조회 실패',
+          description: '다시 시도해주세요.',
+          variant: 'destructive',
+        })
+        // 로그인되지 않은 경우 홈으로 리다이렉트
+        router.push('/')
+      } finally {
+        setIsLoadingUser(false)
+      }
+    }
+
+    fetchUser()
+  }, [mounted, router, toast])
+
+  // 주문 내역 조회
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!mounted || !user.userId) return
+
+      setIsLoadingOrders(true)
+      try {
+        const response = await orderService.getOrders({ page: 0, size: 10 })
+        setOrders(response.content || [])
+        setOrderCount(response.totalElements || 0)
+      } catch (error) {
+        console.error('주문 내역 조회 실패:', error)
+        setOrders([])
+        setOrderCount(0)
+      } finally {
+        setIsLoadingOrders(false)
+      }
+    }
+
+    fetchOrders()
+  }, [mounted, user.userId])
+
+  // 리뷰 개수 조회
+  useEffect(() => {
+    const fetchReviewCount = async () => {
+      if (!mounted || !user.userId) return
+
+      setIsLoadingReviews(true)
+      try {
+        const response = await reviewService.getMyReviews({ page: 0, size: 1 })
+        setReviewCount(response.totalElements || 0)
+      } catch (error) {
+        console.error('리뷰 개수 조회 실패:', error)
+        setReviewCount(0)
+      } finally {
+        setIsLoadingReviews(false)
+      }
+    }
+
+    fetchReviewCount()
+  }, [mounted, user.userId])
+
   // 이번달 정산금액 조회 (판매자만)
   useEffect(() => {
     const fetchMonthlySettlement = async () => {
-      if (user.role !== 'SELLER') return
+      if (!mounted || user.role !== 'SELLER') return
 
       setIsLoadingSettlement(true)
       try {
@@ -207,37 +319,106 @@ export default function ProfilePage() {
     }
 
     fetchMonthlySettlement()
-  }, [user.role])
+  }, [mounted, user.role])
+
+  // 예치금 조회 함수 (재사용 가능하도록 분리)
+  const fetchDepositBalance = async () => {
+    setIsLoadingDeposit(true)
+    try {
+      const response = await depositService.getDeposit()
+      setDepositBalance(response.balance)
+    } catch (error: any) {
+      // 404 에러인 경우 예치금 계정이 없는 것으로 처리 (정상)
+      if (error?.status === 404) {
+        console.log('예치금 계정 없음 (정상):', error?.message || '예치금 계정이 없습니다.')
+        setDepositBalance(0)
+      } else {
+        // 다른 에러인 경우 상세 정보 로깅
+        console.error('예치금 조회 실패:', {
+          status: error?.status,
+          message: error?.message,
+          code: error?.code,
+          details: error?.details,
+          error: error,
+        })
+        setDepositBalance(0)
+      }
+    } finally {
+      setIsLoadingDeposit(false)
+    }
+  }
 
   // 예치금 조회 (구매자, 판매자 모두)
   useEffect(() => {
-    const fetchDepositBalance = async () => {
-      setIsLoadingDeposit(true)
-      try {
-        const response = await depositService.getDeposit()
-        setDepositBalance(response.balance)
-      } catch (error: any) {
-        console.error('예치금 조회 실패:', error)
-        // 404 에러인 경우 예치금 계정이 없는 것으로 처리 (정상)
-        if (error?.status === 404) {
-          setDepositBalance(0)
-        } else {
-          // 다른 에러인 경우도 0으로 설정
-          setDepositBalance(0)
-        }
-      } finally {
-        setIsLoadingDeposit(false)
-      }
+    if (mounted) {
+      fetchDepositBalance()
+    }
+  }, [mounted])
+
+  // 예치금 충전 처리
+  const handleDepositCharge = async () => {
+    const amount = parseInt(chargeAmount.replace(/,/g, ''), 10)
+
+    if (!amount || amount < 1000) {
+      toast({
+        title: '충전 금액 오류',
+        description: '최소 1,000원 이상 충전 가능합니다.',
+        variant: 'destructive',
+      })
+      return
     }
 
-    fetchDepositBalance()
-  }, [])
+    if (amount > 1000000) {
+      toast({
+        title: '충전 금액 오류',
+        description: '최대 1,000,000원까지 충전 가능합니다.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsCharging(true)
+    try {
+      const response = await depositService.createCharge({ amount })
+      toast({
+        title: '예치금 충전 요청 완료',
+        description: `${amount.toLocaleString()}원 충전이 요청되었습니다. 결제를 진행해주세요.`,
+      })
+
+      // TODO: 실제 결제 프로세스 연동 (토스페이먼츠 등)
+      // 현재는 충전 요청만 생성하고, 실제 결제는 별도로 처리해야 함
+      console.log('예치금 충전 요청:', response)
+
+      setIsDepositChargeDialogOpen(false)
+      setChargeAmount('')
+
+      // 예치금 잔액 다시 조회
+      await fetchDepositBalance()
+    } catch (error: any) {
+      console.error('예치금 충전 실패:', error)
+      toast({
+        title: '충전 실패',
+        description: error?.message || '예치금 충전 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsCharging(false)
+    }
+  }
 
   const stats = [
-    { label: '주문 내역', value: '12', icon: Package },
+    {
+      label: '주문 내역',
+      value: isLoadingOrders ? '조회 중...' : String(orderCount),
+      icon: Package,
+    },
     // TODO: 찜하기 기능 추가 예정
     // { label: '찜한 상품', value: '8', icon: Heart },
-    { label: '작성한 리뷰', value: '5', icon: Star },
+    {
+      label: '작성한 리뷰',
+      value: isLoadingReviews ? '조회 중...' : String(reviewCount),
+      icon: Star,
+    },
   ]
 
   // 예치금 카드 추가 (구매자, 판매자 모두)
@@ -267,29 +448,35 @@ export default function ProfilePage() {
         ]
       : []
 
-  const recentOrders = [
-    {
-      id: 'ORD-001234',
-      date: '2024.12.10',
-      status: '배송 완료',
-      items: ['유기농 방울토마토', '무농약 상추'],
-      total: 25000,
-    },
-    {
-      id: 'ORD-001233',
-      date: '2024.12.08',
-      status: '배송 중',
-      items: ['친환경 딸기'],
-      total: 15000,
-    },
-    {
-      id: 'ORD-001232',
-      date: '2024.12.05',
-      status: '배송 준비',
-      items: ['유기농 감자'],
-      total: 12000,
-    },
-  ]
+  // 주문 데이터를 표시 형식으로 변환
+  const recentOrders = orders.map((order) => {
+    const orderDate = order.createdAt
+      ? new Date(order.createdAt).toLocaleDateString('ko-KR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        })
+      : ''
+
+    // 주문 상태를 한글로 변환
+    const statusMap: Record<string, string> = {
+      PENDING: '배송 준비',
+      PAID: '배송 중',
+      CANCELED: '취소됨',
+    }
+    const status = statusMap[order.status] || order.status
+
+    // 주문 항목 이름 추출 (items가 있으면 사용, 없으면 빈 배열)
+    const items = order.items?.map((item) => item.productName || '상품') || []
+
+    return {
+      id: order.orderId,
+      date: orderDate,
+      status,
+      items,
+      total: order.totalAmount || 0,
+    }
+  })
 
   const favoriteProducts = [
     {
@@ -351,9 +538,28 @@ export default function ProfilePage() {
         return <Badge variant="default">배송 중</Badge>
       case '배송 준비':
         return <Badge variant="outline">배송 준비</Badge>
+      case '취소됨':
+        return <Badge variant="destructive">취소됨</Badge>
       default:
         return <Badge>{status}</Badge>
     }
+  }
+
+  // 로딩 중이거나 사용자 정보가 없으면 로딩 표시
+  if (!mounted || isLoadingUser) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="text-lg font-semibold mb-2">로딩 중...</div>
+              <div className="text-sm text-muted-foreground">사용자 정보를 불러오는 중입니다.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -392,19 +598,22 @@ export default function ProfilePage() {
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h2 className="text-2xl font-bold mb-2">{user.name}</h2>
+                      <h2 className="text-2xl font-bold mb-2">{user.name || user.email}</h2>
                       <div className="space-y-1 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4" />
                           <span>{user.email}</span>
                         </div>
+                        {user.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4" />
+                            <span>{user.phone}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4" />
-                          <span>{user.phone}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>가입일: {user.joinDate}</span>
+                          <Badge variant="outline">
+                            {user.role === 'SELLER' ? '판매자' : '구매자'}
+                          </Badge>
                         </div>
                       </div>
                     </div>
@@ -443,7 +652,79 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div className="text-3xl font-bold mb-1 text-primary">{depositStat.value}</div>
-                <div className="text-sm text-muted-foreground">{depositStat.label}</div>
+                <div className="text-sm text-muted-foreground mb-3">{depositStat.label}</div>
+                <Dialog
+                  open={isDepositChargeDialogOpen}
+                  onOpenChange={setIsDepositChargeDialogOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full">
+                      <Wallet className="h-4 w-4 mr-2" />
+                      예치금 충전
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>예치금 충전</DialogTitle>
+                      <DialogDescription>
+                        충전할 금액을 입력해주세요. (최소 1,000원)
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="chargeAmount">충전 금액</Label>
+                        <Input
+                          id="chargeAmount"
+                          type="text"
+                          placeholder="10,000"
+                          value={chargeAmount}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9]/g, '')
+                            if (value) {
+                              setChargeAmount(parseInt(value, 10).toLocaleString())
+                            } else {
+                              setChargeAmount('')
+                            }
+                          }}
+                          disabled={isCharging}
+                        />
+                        <div className="flex gap-2">
+                          {[10000, 50000, 100000, 500000].map((amount) => (
+                            <Button
+                              key={amount}
+                              variant="outline"
+                              size="sm"
+                              type="button"
+                              onClick={() => setChargeAmount(amount.toLocaleString())}
+                              disabled={isCharging}
+                            >
+                              {amount.toLocaleString()}원
+                            </Button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          현재 잔액: {depositBalance !== null ? depositBalance.toLocaleString() : 0}
+                          원
+                        </p>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsDepositChargeDialogOpen(false)
+                          setChargeAmount('')
+                        }}
+                        disabled={isCharging}
+                      >
+                        취소
+                      </Button>
+                      <Button onClick={handleDepositCharge} disabled={isCharging || !chargeAmount}>
+                        {isCharging ? '충전 중...' : '충전하기'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </Card>
               {/* 판매자 정산금액 카드 */}
               {sellerStats.map((stat) => {
@@ -471,28 +752,40 @@ export default function ProfilePage() {
                 </Button>
               </div>
               <div className="space-y-4">
-                {recentOrders.slice(0, 3).map((order) => (
-                  <div
-                    key={order.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => router.push(`/order/${order.id}`)}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="font-semibold">{order.id}</span>
-                        {getStatusBadge(order.status)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">{order.items.join(', ')}</div>
-                      <div className="text-sm text-muted-foreground">{order.date}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold">{order.total.toLocaleString()}원</div>
-                      <Button variant="ghost" size="sm" className="mt-2">
-                        상세보기
-                      </Button>
-                    </div>
+                {isLoadingOrders ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    주문 내역을 불러오는 중...
                   </div>
-                ))}
+                ) : recentOrders.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    주문 내역이 없습니다.
+                  </div>
+                ) : (
+                  recentOrders.slice(0, 3).map((order) => (
+                    <div
+                      key={order.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => router.push(`/order/${order.id}`)}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="font-semibold">{order.id}</span>
+                          {getStatusBadge(order.status)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {order.items.length > 0 ? order.items.join(', ') : '상품 정보 없음'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{order.date}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">{order.total.toLocaleString()}원</div>
+                        <Button variant="ghost" size="sm" className="mt-2">
+                          상세보기
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
           </TabsContent>
@@ -501,34 +794,42 @@ export default function ProfilePage() {
           <TabsContent value="orders" className="space-y-6">
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4">주문 내역</h2>
-              <div className="space-y-4">
-                {recentOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => router.push(`/order/${order.id}`)}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="font-semibold">주문번호: {order.id}</span>
-                        {getStatusBadge(order.status)}
+              {isLoadingOrders ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  주문 내역을 불러오는 중...
+                </div>
+              ) : recentOrders.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">주문 내역이 없습니다.</div>
+              ) : (
+                <div className="space-y-4">
+                  {recentOrders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => router.push(`/order/${order.id}`)}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="font-semibold">주문번호: {order.id}</span>
+                          {getStatusBadge(order.status)}
+                        </div>
+                        <div className="text-sm text-muted-foreground mb-1">
+                          {order.items.length > 0 ? order.items.join(', ') : '상품 정보 없음'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{order.date}</div>
                       </div>
-                      <div className="text-sm text-muted-foreground mb-1">
-                        {order.items.join(', ')}
+                      <div className="text-right">
+                        <div className="font-semibold text-lg mb-2">
+                          {order.total.toLocaleString()}원
+                        </div>
+                        <Button variant="outline" size="sm">
+                          상세보기
+                        </Button>
                       </div>
-                      <div className="text-sm text-muted-foreground">{order.date}</div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-lg mb-2">
-                        {order.total.toLocaleString()}원
-                      </div>
-                      <Button variant="outline" size="sm">
-                        상세보기
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </Card>
           </TabsContent>
 
@@ -579,10 +880,11 @@ export default function ProfilePage() {
                       <li>• 농장 정보 관리</li>
                       <li>• 매출 및 정산 관리</li>
                     </ul>
-                    {user.role === 'BUYER' && (
+                    {/* 판매자가 아닌 경우 판매자 전환 버튼 표시 */}
+                    {user.role !== 'SELLER' && user.userId && (
                       <Dialog open={isSellerDialogOpen} onOpenChange={setIsSellerDialogOpen}>
                         <DialogTrigger asChild>
-                          <Button>
+                          <Button className="mt-2">
                             <Store className="h-4 w-4 mr-2" />
                             판매자로 전환
                           </Button>
@@ -750,17 +1052,38 @@ export default function ProfilePage() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="name">이름</Label>
-                  <Input id="name" defaultValue={user.name} className="mt-1" />
+                  <Input
+                    id="name"
+                    defaultValue={user.name || user.email?.split('@')[0] || ''}
+                    className="mt-1"
+                    disabled
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    이름은 이메일에서 자동으로 추출됩니다.
+                  </p>
                 </div>
                 <div>
                   <Label htmlFor="email">이메일</Label>
-                  <Input id="email" type="email" defaultValue={user.email} className="mt-1" />
+                  <Input
+                    id="email"
+                    type="email"
+                    defaultValue={user.email}
+                    className="mt-1"
+                    disabled
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">이메일은 변경할 수 없습니다.</p>
                 </div>
-                <div>
-                  <Label htmlFor="phone">전화번호</Label>
-                  <Input id="phone" defaultValue={user.phone} className="mt-1" />
+                {user.phone && (
+                  <div>
+                    <Label htmlFor="phone">전화번호</Label>
+                    <Input id="phone" defaultValue={user.phone} className="mt-1" disabled />
+                  </div>
+                )}
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    프로필 정보 수정 기능은 추후 추가 예정입니다.
+                  </p>
                 </div>
-                <Button>저장</Button>
               </div>
             </Card>
 
@@ -831,8 +1154,8 @@ export default function ProfilePage() {
               </div>
             </Card>
 
-            {/* Payment Methods */}
-            <Card className="p-6">
+            {/* Payment Methods - 숨김 처리 */}
+            {/* <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">결제 수단</h2>
                 <Button variant="outline" size="sm">
@@ -843,7 +1166,7 @@ export default function ProfilePage() {
               <div className="text-center py-8 text-muted-foreground">
                 등록된 결제 수단이 없습니다
               </div>
-            </Card>
+            </Card> */}
 
             {/* Account Actions */}
             <Card className="p-6">

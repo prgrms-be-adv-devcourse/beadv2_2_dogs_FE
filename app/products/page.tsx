@@ -18,6 +18,27 @@ import {
 } from '@/components/ui/select'
 import { productService } from '@/lib/api/services/product'
 import type { Product } from '@/lib/api/types'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
+import { getProductImage } from '@/lib/utils/product-images'
+
+// 카테고리 한글 변환 맵 (컴포넌트 외부로 이동하여 useMemo 의존성 문제 해결)
+const categoryMap: Record<string, string> = {
+  FRUIT: '과일',
+  VEGETABLE: '채소',
+  GRAIN: '곡물',
+  NUT: '견과',
+  ROOT: '뿌리',
+  MUSHROOM: '버섯',
+  ETC: '기타',
+} as const
 
 export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -26,6 +47,15 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [paginationInfo, setPaginationInfo] = useState<{
+    totalPages: number
+    totalElements: number
+    hasNext: boolean
+    hasPrevious: boolean
+    page: number
+    size: number
+  } | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -38,7 +68,10 @@ export default function ProductsPage() {
 
       setIsLoading(true)
       try {
-        const params: { category?: string; keyword?: string; page?: number; size?: number } = {}
+        const params: { category?: string; keyword?: string; page?: number; size?: number } = {
+          page: currentPage,
+          size: 20,
+        }
         if (category !== 'all') {
           params.category = category
         }
@@ -48,87 +81,31 @@ export default function ProductsPage() {
         const response = await productService.getProducts(params)
         // response.content가 배열인지 확인하고, 없으면 빈 배열로 설정
         setProducts(Array.isArray(response?.content) ? response.content : [])
+        // 페이지네이션 정보 저장
+        const paginationData = {
+          totalPages: response.totalPages || 0,
+          totalElements: response.totalElements || 0,
+          hasNext: response.hasNext || false,
+          hasPrevious: response.hasPrevious || false,
+          page: response.page || 0,
+          size: response.size || 20,
+        }
+        console.log('페이지네이션 정보:', paginationData)
+        setPaginationInfo(paginationData)
       } catch (error) {
         console.error('상품 조회 실패:', error)
         // 에러 발생 시 빈 배열로 설정
         setProducts([])
+        setPaginationInfo(null)
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchProducts()
-  }, [mounted, category, searchQuery])
+  }, [mounted, category, searchQuery, currentPage])
 
-  // 카테고리 한글 변환 맵
-  const categoryMap: Record<string, string> = {
-    FRUIT: '과일',
-    VEGETABLE: '채소',
-    GRAIN: '곡물',
-    NUT: '견과',
-    ROOT: '뿌리',
-    MUSHROOM: '버섯',
-    ETC: '기타',
-  }
-
-  // 상품명에 따른 이미지 매핑
-  const getProductImage = (productName: string, productId: string): string => {
-    const name = productName.toLowerCase()
-
-    // 상품명 키워드에 따른 이미지 매핑
-    if (name.includes('토마토') || name.includes('tomato')) {
-      return '/fresh-organic-cherry-tomatoes.jpg'
-    }
-    if (name.includes('상추') || name.includes('lettuce')) {
-      return '/fresh-organic-lettuce.png'
-    }
-    if (name.includes('딸기') || name.includes('strawberry')) {
-      return '/images/strawberries.png'
-    }
-    if (name.includes('감자') || name.includes('potato')) {
-      return '/fresh-organic-potatoes.jpg'
-    }
-    if (name.includes('사과') || name.includes('apple')) {
-      return '/images/apples.png'
-    }
-    if (name.includes('당근') || name.includes('carrot')) {
-      return '/fresh-organic-carrots.jpg'
-    }
-    if (name.includes('블루베리') || name.includes('blueberry')) {
-      return '/fresh-organic-blueberries.jpg'
-    }
-    if (name.includes('브로콜리') || name.includes('broccoli')) {
-      return '/fresh-organic-broccoli.jpg'
-    }
-    if (name.includes('오이') || name.includes('cucumber')) {
-      return '/fresh-organic-lettuce.png'
-    }
-    if (name.includes('배추') || name.includes('cabbage')) {
-      return '/fresh-organic-lettuce.png'
-    }
-    if (name.includes('양파') || name.includes('onion')) {
-      return '/fresh-organic-potatoes.jpg'
-    }
-    if (name.includes('고추') || name.includes('pepper')) {
-      return '/fresh-organic-cherry-tomatoes.jpg'
-    }
-
-    // 매칭되지 않으면 상품 ID를 기반으로 랜덤하게 선택
-    const fallbackImages = [
-      '/fresh-organic-cherry-tomatoes.jpg',
-      '/fresh-organic-lettuce.png',
-      '/images/strawberries.png',
-      '/fresh-organic-potatoes.jpg',
-      '/images/apples.png',
-      '/fresh-organic-carrots.jpg',
-      '/fresh-organic-blueberries.jpg',
-      '/fresh-organic-broccoli.jpg',
-    ]
-
-    // productId의 해시값을 사용하여 일관된 랜덤 선택
-    const hash = productId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    return fallbackImages[hash % fallbackImages.length]
-  }
+  // 상품명에 따른 이미지 매핑은 lib/utils/product-images.ts의 getProductImage 함수 사용
 
   // API 데이터를 표시 형식으로 변환
   const displayProducts = useMemo(() => {
@@ -202,6 +179,13 @@ export default function ProductsPage() {
     setSearchQuery('')
     setCategory('all')
     setSortBy('popular')
+    setCurrentPage(0) // 필터 초기화 시 첫 페이지로 이동
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // 페이지 변경 시 스크롤을 상단으로 이동
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   return (
@@ -280,11 +264,13 @@ export default function ProductsPage() {
                 <>
                   총{' '}
                   <span className="font-semibold text-foreground">
-                    {filteredAndSortedProducts.length}
+                    {paginationInfo?.totalElements || filteredAndSortedProducts.length}
                   </span>
                   개의 상품
-                  {hasActiveFilters && (
-                    <span className="ml-2 text-xs">(전체 {products.length}개 중)</span>
+                  {paginationInfo && paginationInfo.totalPages > 1 && (
+                    <span className="ml-2 text-xs">
+                      (페이지 {paginationInfo.page + 1} / {paginationInfo.totalPages})
+                    </span>
                   )}
                 </>
               )}
@@ -357,6 +343,82 @@ export default function ProductsPage() {
                   </Link>
                 </Card>
               ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {paginationInfo && paginationInfo.totalPages > 0 && (
+            <div className="mt-12 flex justify-center">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        if (paginationInfo.hasPrevious) {
+                          handlePageChange(currentPage - 1)
+                        }
+                      }}
+                      className={
+                        !paginationInfo.hasPrevious
+                          ? 'pointer-events-none opacity-50'
+                          : 'cursor-pointer'
+                      }
+                    />
+                  </PaginationItem>
+
+                  {/* 페이지 번호 표시 */}
+                  {Array.from({ length: paginationInfo.totalPages }, (_, i) => i).map((page) => {
+                    // 현재 페이지 주변 2페이지씩만 표시
+                    if (
+                      page === 0 ||
+                      page === paginationInfo.totalPages - 1 ||
+                      (page >= currentPage - 2 && page <= currentPage + 2)
+                    ) {
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              handlePageChange(page)
+                            }}
+                            isActive={page === currentPage}
+                            className="cursor-pointer"
+                          >
+                            {page + 1}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )
+                    } else if (page === currentPage - 3 || page === currentPage + 3) {
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )
+                    }
+                    return null
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        if (paginationInfo.hasNext) {
+                          handlePageChange(currentPage + 1)
+                        }
+                      }}
+                      className={
+                        !paginationInfo.hasNext
+                          ? 'pointer-events-none opacity-50'
+                          : 'cursor-pointer'
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </div>

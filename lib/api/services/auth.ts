@@ -90,10 +90,16 @@ export const authService = {
 
   // 이메일 인증코드 검증
   async verifyEmailCode(email: string, code: string): Promise<{ verified: boolean }> {
-    return authApi.post('/api/v1/auth/verification/email/verify-code', {
-      email,
-      code,
-    } as VerifyCodeRequest)
+    const response = await authApi.post<{ verified?: boolean }>(
+      '/api/v1/auth/verification/email/verify-code',
+      {
+        email,
+        code,
+      } as VerifyCodeRequest
+    )
+    // response body가 없거나 verified 필드가 없어도 200 OK면 인증 성공으로 처리
+    // (에러가 발생하면 ApiClient에서 throw되므로 여기까지 오면 성공)
+    return { verified: response?.verified ?? true }
   },
 
   // 이메일 인증 (토큰 기반)
