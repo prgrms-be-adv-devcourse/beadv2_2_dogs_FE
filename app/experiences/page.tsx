@@ -16,13 +16,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { experienceService } from '@/lib/api/services/experience'
+import { useEffect } from 'react'
+import type { Experience } from '@/lib/api/types'
 
 export default function ExperiencesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [category, setCategory] = useState('all')
   const [sortBy, setSortBy] = useState('popular')
+  const [experiences, setExperiences] = useState<Experience[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
 
-  const experiences = [
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // 체험 프로그램 목록 로드
+  useEffect(() => {
+    const fetchExperiences = async () => {
+      if (!mounted) return
+
+      setIsLoading(true)
+      try {
+        const params: { category?: string; page?: number; size?: number } = {}
+        if (category !== 'all') {
+          params.category = category
+        }
+        const response = await experienceService.getExperiences(params)
+        setExperiences(response.content)
+      } catch (error) {
+        console.error('체험 프로그램 조회 실패:', error)
+        // 에러 발생 시 빈 배열로 설정
+        setExperiences([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchExperiences()
+  }, [mounted, category])
+
+  // 임시 더미 데이터 (API 실패 시 대체용)
+  const dummyExperiences = [
     {
       id: 1,
       title: '딸기 수확 체험',
@@ -109,9 +145,28 @@ export default function ExperiencesPage() {
     },
   ]
 
+  // API 데이터를 표시 형식으로 변환
+  const displayExperiences =
+    experiences.length > 0
+      ? experiences.map((exp) => ({
+          id: exp.id,
+          title: exp.title,
+          farm: exp.farmName || '',
+          location: exp.location || '',
+          price: exp.pricePerPerson || 0,
+          image: exp.imageUrl || '/placeholder.svg',
+          duration: `${exp.duration || 2}시간`, // TODO: 실제 duration 형식에 맞게 변환
+          capacity: `최대 ${exp.maxParticipants || 10}명`,
+          rating: exp.rating || 0,
+          reviews: exp.reviewCount || 0,
+          category: exp.category || '기타',
+          tag: '인기', // TODO: 태그 정보 추가
+        }))
+      : dummyExperiences
+
   // 필터링 및 정렬 로직
   const filteredAndSortedExperiences = useMemo(() => {
-    let filtered = [...experiences]
+    let filtered = [...displayExperiences]
 
     // 검색 필터
     if (searchQuery.trim()) {
@@ -151,7 +206,7 @@ export default function ExperiencesPage() {
     }
 
     return filtered
-  }, [searchQuery, category, sortBy])
+  }, [searchQuery, category, sortBy, displayExperiences])
 
   const hasActiveFilters = searchQuery.trim() || category !== 'all'
 
@@ -234,7 +289,7 @@ export default function ExperiencesPage() {
               </span>
               개의 체험 프로그램
               {hasActiveFilters && (
-                <span className="ml-2 text-xs">(전체 {experiences.length}개 중)</span>
+                <span className="ml-2 text-xs">(전체 {displayExperiences.length}개 중)</span>
               )}
             </p>
             {hasActiveFilters && (

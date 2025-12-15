@@ -1,64 +1,71 @@
 import { experienceApi } from '../client'
 import type {
   Experience,
+  ExperienceCreateRequest,
+  ExperienceUpdateRequest,
   ExperienceBooking,
-  CreateBookingRequest,
+  ReservationRequest,
   PaginatedResponse,
   PaginationParams,
 } from '../types'
 
 export const experienceService = {
-  // 체험 프로그램 목록 조회 (Support Service - /api/v1/ 패턴 적용)
+  // 체험 프로그램 목록 조회
   async getExperiences(
-    params?: PaginationParams & { category?: string; farmId?: number }
+    params?: PaginationParams & { category?: string; farmId?: string }
   ): Promise<PaginatedResponse<Experience>> {
-    return experienceApi.get<PaginatedResponse<Experience>>('/api/v1/experiences', { params })
+    return experienceApi.get<PaginatedResponse<Experience>>('/experiences', { params })
+  },
+
+  // 체험 프로그램 등록
+  async createExperience(data: ExperienceCreateRequest): Promise<Experience> {
+    return experienceApi.post<Experience>('/experiences', data)
   },
 
   // 체험 프로그램 상세 조회
-  async getExperience(id: number): Promise<Experience> {
-    return experienceApi.get<Experience>(`/api/v1/experiences/${id}`)
+  async getExperience(id: string): Promise<Experience> {
+    return experienceApi.get<Experience>(`/experiences/${id}`)
   },
 
-  // 인기 체험 프로그램 조회
-  async getPopularExperiences(limit?: number): Promise<Experience[]> {
-    return experienceApi.get<Experience[]>('/api/v1/experiences/popular', { params: { limit } })
+  // 체험 프로그램 수정
+  async updateExperience(id: string, data: ExperienceUpdateRequest): Promise<Experience> {
+    return experienceApi.put<Experience>(`/experiences/${id}`, data)
   },
 
-  // 농장별 체험 프로그램 조회
-  async getExperiencesByFarm(farmId: number): Promise<Experience[]> {
-    return experienceApi.get<Experience[]>(`/api/v1/experiences/farm/${farmId}`)
+  // 체험 프로그램 삭제
+  async deleteExperience(id: string): Promise<void> {
+    return experienceApi.delete(`/experiences/${id}`)
   },
 
-  // 예약 가능 날짜 조회
-  async getAvailableDates(
-    experienceId: number,
-    month: string
-  ): Promise<{ date: string; available: number }[]> {
-    return experienceApi.get(`/api/v1/experiences/${experienceId}/available-dates`, {
-      params: { month },
-    })
+  // 내 체험 프로그램 목록 조회
+  async getMyExperiences(params?: PaginationParams): Promise<PaginatedResponse<Experience>> {
+    return experienceApi.get<PaginatedResponse<Experience>>('/experiences/my-farm', { params })
+  },
+}
+
+export const reservationService = {
+  // 예약 등록
+  async createReservation(data: ReservationRequest): Promise<ExperienceBooking> {
+    return experienceApi.post<ExperienceBooking>('/reservations', data)
   },
 
-  // 체험 예약
-  async createBooking(data: CreateBookingRequest): Promise<ExperienceBooking> {
-    return experienceApi.post<ExperienceBooking>('/api/v1/bookings', data)
-  },
-
-  // 내 예약 목록 조회
-  async getMyBookings(params?: PaginationParams): Promise<PaginatedResponse<ExperienceBooking>> {
-    return experienceApi.get<PaginatedResponse<ExperienceBooking>>('/api/v1/bookings/my', {
-      params,
-    })
+  // 예약 목록 조회
+  async getReservations(params?: PaginationParams): Promise<PaginatedResponse<ExperienceBooking>> {
+    return experienceApi.get<PaginatedResponse<ExperienceBooking>>('/reservations', { params })
   },
 
   // 예약 상세 조회
-  async getBooking(id: number): Promise<ExperienceBooking> {
-    return experienceApi.get<ExperienceBooking>(`/api/v1/bookings/${id}`)
+  async getReservation(reservationId: string): Promise<ExperienceBooking> {
+    return experienceApi.get<ExperienceBooking>(`/reservations/${reservationId}`)
   },
 
-  // 예약 취소
-  async cancelBooking(id: number, reason?: string): Promise<ExperienceBooking> {
-    return experienceApi.post<ExperienceBooking>(`/api/v1/bookings/${id}/cancel`, { reason })
+  // 예약 상태 변경
+  async updateReservationStatus(reservationId: string, status: string): Promise<ExperienceBooking> {
+    return experienceApi.put<ExperienceBooking>(`/reservations/${reservationId}/status`, { status })
+  },
+
+  // 예약 삭제
+  async deleteReservation(reservationId: string): Promise<void> {
+    return experienceApi.delete(`/reservations/${reservationId}`)
   },
 }

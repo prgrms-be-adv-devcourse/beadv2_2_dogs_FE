@@ -37,20 +37,12 @@ export function useSearch(options: UseSearchOptions = {}) {
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // 인기 검색어 로드
+  // TODO: 인기 검색어 API가 추가되면 구현
   useEffect(() => {
     if (!enablePopularKeywords) return
 
-    const loadPopularKeywords = async () => {
-      try {
-        const keywords = await searchService.getPopularKeywords()
-        setPopularKeywords(keywords)
-      } catch (err) {
-        // API가 준비되지 않았을 때는 무시
-        console.debug('인기 검색어 로드 실패:', err)
-      }
-    }
-
-    loadPopularKeywords()
+    // 현재는 인기 검색어 API가 없으므로 빈 배열로 설정
+    setPopularKeywords([])
   }, [enablePopularKeywords])
 
   // 검색어 자동완성
@@ -71,8 +63,15 @@ export function useSearch(options: UseSearchOptions = {}) {
       setError(null)
 
       try {
-        const results = await searchService.getSuggestions(searchQuery)
-        setSuggestions(results)
+        // 통합 자동완성 API 사용
+        const response = await searchService.getAutocomplete(searchQuery)
+        // 통합 자동완성 결과를 문자열 배열로 변환
+        const allSuggestions: string[] = [
+          ...response.products.map((p) => p.productName),
+          ...response.farms.map((f) => f.farmName),
+          ...response.experiences.map((e) => e.title),
+        ]
+        setSuggestions(allSuggestions)
       } catch (err) {
         if (err instanceof Error && err.name !== 'AbortError') {
           setError(err)

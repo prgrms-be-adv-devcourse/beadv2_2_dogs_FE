@@ -18,30 +18,62 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { useCartStore } from '@/lib/cart-store'
 import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
 import { ReviewForm, ReviewList, ReviewSummary, type Review } from '@/components/review'
 import { Header } from '@/components/layout/header'
+import { productService } from '@/lib/api/services/product'
+import type { Product } from '@/lib/api/types'
 
 export default function ProductDetailPage() {
   const router = useRouter()
+  const params = useParams()
+  const productId = params?.id as string
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
   const [mounted, setMounted] = useState(false)
   const [showReviewForm, setShowReviewForm] = useState(false)
+  const [product, setProduct] = useState<Product | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const { addItem, getTotalItems } = useCartStore()
   const { toast } = useToast()
   const cartItemsCount = mounted ? getTotalItems() : 0
 
   useEffect(() => {
-    // 마운트 상태 설정을 위한 effect
-
     setMounted(true)
   }, [])
 
-  const product = {
+  // 상품 데이터 로드
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!productId) return
+
+      setIsLoading(true)
+      try {
+        const data = await productService.getProduct(productId)
+        setProduct(data)
+      } catch (error) {
+        console.error('상품 조회 실패:', error)
+        toast({
+          title: '상품 조회 실패',
+          description: '상품 정보를 불러오는데 실패했습니다.',
+          variant: 'destructive',
+        })
+        router.push('/products')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (mounted && productId) {
+      fetchProduct()
+    }
+  }, [mounted, productId, router, toast])
+
+  // 임시 더미 데이터 (API 실패 시 대체용)
+  const dummyProduct = {
     id: 1,
     name: '유기농 방울토마토',
     farm: '햇살농장',
@@ -65,6 +97,34 @@ export default function ProductDetailPage() {
     delivery: '수확 후 당일 배송',
     features: ['100% 유기농 재배', '무농약, 무화학비료', '당일 수확 당일 배송', 'GAP 인증 농장'],
   }
+
+  // API에서 가져온 상품 데이터를 표시 형식으로 변환
+  const displayProduct = product
+    ? {
+        id: product.id,
+        name: product.productName || product.name || '',
+        farm: product.farmName || '',
+        farmId: product.sellerId || '',
+        location: product.farmLocation || '',
+        price: product.price,
+        originalPrice: product.price, // TODO: 할인가 계산
+        images: product.imageUrls || product.images || [],
+        rating: product.rating || 0,
+        reviews: product.reviewCount || 0,
+        tag: '베스트', // TODO: 태그 정보 추가
+        category: product.productCategory || product.category || '',
+        description: product.description,
+        weight: '1kg', // TODO: 무게 정보 추가
+        certification: '유기농 인증', // TODO: 인증 정보 추가
+        delivery: '수확 후 당일 배송', // TODO: 배송 정보 추가
+        features: [
+          '100% 유기농 재배',
+          '무농약, 무화학비료',
+          '당일 수확 당일 배송',
+          'GAP 인증 농장',
+        ], // TODO: 특징 정보 추가
+      }
+    : dummyProduct
 
   const reviews: Review[] = [
     {
@@ -129,18 +189,20 @@ export default function ProductDetailPage() {
   ]
 
   const handleAddToCart = () => {
+    if (!displayProduct) return
+
     addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.images[0],
-      farm: product.farm,
+      id: Number(displayProduct.id) || 0, // TODO: UUID를 number로 변환하는 로직 개선 필요
+      name: displayProduct.name,
+      price: displayProduct.price,
+      image: displayProduct.images[0] || '/placeholder.svg',
+      farm: displayProduct.farm,
       quantity,
     })
 
     toast({
       title: '장바구니에 추가되었습니다',
-      description: `${product.name} ${quantity}개가 장바구니에 담겼습니다.`,
+      description: `${displayProduct.name} ${quantity}개가 장바구니에 담겼습니다.`,
       action: (
         <ToastAction altText="장바구니 보기" onClick={() => router.push('/cart')}>
           장바구니 보기
@@ -152,18 +214,20 @@ export default function ProductDetailPage() {
   }
 
   const handleBuyNow = async () => {
+    if (!displayProduct) return
+
     console.log('[ProductDetail] handleBuyNow called:', {
-      productId: product.id,
+      productId: displayProduct.id,
       quantity,
     })
 
     // 바로 구매: 선택한 수량만 장바구니에 추가 (기존 아이템은 유지)
     addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.images[0],
-      farm: product.farm,
+      id: Number(displayProduct.id) || 0, // TODO: UUID를 number로 변환하는 로직 개선 필요
+      name: displayProduct.name,
+      price: displayProduct.price,
+      image: displayProduct.images[0] || '/placeholder.svg',
+      farm: displayProduct.farm,
       quantity,
       isBuyNow: true, // 바로 구매 플래그
     })
@@ -172,7 +236,7 @@ export default function ProductDetailPage() {
 
     toast({
       title: '주문 페이지로 이동합니다',
-      description: `${product.name} ${quantity}개를 주문합니다.`,
+      description: `${displayProduct.name} ${quantity}개를 주문합니다.`,
     })
 
     // persist 미들웨어가 localStorage에 저장할 시간을 확보
@@ -192,6 +256,28 @@ export default function ProductDetailPage() {
     })
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header showCart />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">로딩 중...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!displayProduct) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header showCart />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">상품을 찾을 수 없습니다.</div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header showCart />
@@ -203,16 +289,16 @@ export default function ProductDetailPage() {
           <div className="space-y-4">
             <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
               <Image
-                src={product.images[selectedImage] || '/placeholder.svg'}
-                alt={product.name}
+                src={displayProduct.images[selectedImage] || '/placeholder.svg'}
+                alt={displayProduct.name}
                 fill
                 className="object-cover"
                 priority
               />
-              <Badge className="absolute top-4 left-4">{product.tag}</Badge>
+              <Badge className="absolute top-4 left-4">{displayProduct.tag}</Badge>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              {product.images.map((image, index) => (
+              {displayProduct.images.map((image, index) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImage(index)}
@@ -222,7 +308,7 @@ export default function ProductDetailPage() {
                 >
                   <Image
                     src={image || '/placeholder.svg'}
-                    alt={`${product.name} ${index + 1}`}
+                    alt={`${displayProduct.name} ${index + 1}`}
                     fill
                     className="object-cover"
                   />
@@ -235,47 +321,50 @@ export default function ProductDetailPage() {
           <div className="space-y-6">
             <div>
               <Link
-                href={`/farms/${product.farmId}`}
+                href={`/farms/${displayProduct.farmId}`}
                 className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mb-2"
               >
                 <MapPin className="h-3 w-3" />
-                <span>{product.farm}</span>
+                <span>{displayProduct.farm}</span>
                 <span className="mx-1">•</span>
-                <span>{product.location}</span>
+                <span>{displayProduct.location}</span>
               </Link>
-              <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
+              <h1 className="text-3xl font-bold mb-4">{displayProduct.name}</h1>
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex items-center gap-1">
                   <Star className="h-5 w-5 fill-primary text-primary" />
-                  <span className="font-semibold">{product.rating}</span>
+                  <span className="font-semibold">{displayProduct.rating}</span>
                 </div>
-                <span className="text-muted-foreground">({product.reviews}개 리뷰)</span>
+                <span className="text-muted-foreground">({displayProduct.reviews}개 리뷰)</span>
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-bold">{product.price.toLocaleString()}원</span>
+                <span className="text-3xl font-bold">
+                  {displayProduct.price.toLocaleString()}원
+                </span>
                 <span className="text-lg text-muted-foreground line-through">
-                  {product.originalPrice.toLocaleString()}원
+                  {displayProduct.originalPrice.toLocaleString()}원
                 </span>
                 <Badge variant="destructive">
-                  {Math.round((1 - product.price / product.originalPrice) * 100)}% 할인
+                  {Math.round((1 - displayProduct.price / displayProduct.originalPrice) * 100)}%
+                  할인
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                {product.weight} 기준 가격 (배송비 별도)
+                {displayProduct.weight} 기준 가격 (배송비 별도)
               </p>
             </div>
 
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <Shield className="h-4 w-4 text-primary" />
-                <span>{product.certification}</span>
+                <span>{displayProduct.certification}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Truck className="h-4 w-4 text-primary" />
-                <span>{product.delivery}</span>
+                <span>{displayProduct.delivery}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Leaf className="h-4 w-4 text-primary" />
@@ -286,7 +375,7 @@ export default function ProductDetailPage() {
             <Card className="p-4 bg-muted/50">
               <h3 className="font-semibold mb-3">상품 특징</h3>
               <ul className="space-y-2">
-                {product.features.map((feature, index) => (
+                {displayProduct.features.map((feature, index) => (
                   <li key={index} className="flex items-center gap-2 text-sm">
                     <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                     <span>{feature}</span>
@@ -345,20 +434,20 @@ export default function ProductDetailPage() {
           <div className="lg:col-span-2 space-y-8">
             <Card className="p-6">
               <h2 className="text-2xl font-bold mb-4">상품 설명</h2>
-              <p className="text-muted-foreground leading-relaxed">{product.description}</p>
+              <p className="text-muted-foreground leading-relaxed">{displayProduct.description}</p>
             </Card>
 
             {/* Review Summary */}
             <ReviewSummary
-              averageRating={product.rating}
-              totalReviews={product.reviews}
+              averageRating={displayProduct.rating}
+              totalReviews={displayProduct.reviews}
               ratingDistribution={ratingDistribution}
             />
 
             {/* Review Form */}
             {showReviewForm && (
               <ReviewForm
-                productId={product.id}
+                productId={String(displayProduct.id)}
                 onSubmit={(review) => {
                   console.log('Review submitted:', review)
                   setShowReviewForm(false)
@@ -370,7 +459,7 @@ export default function ProductDetailPage() {
             {/* Reviews */}
             <Card className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">고객 리뷰 ({product.reviews})</h2>
+                <h2 className="text-2xl font-bold">고객 리뷰 ({displayProduct.reviews})</h2>
                 {!showReviewForm && (
                   <Button variant="outline" onClick={() => setShowReviewForm(true)}>
                     리뷰 작성
@@ -385,22 +474,22 @@ export default function ProductDetailPage() {
             <Card className="p-6">
               <h3 className="font-semibold mb-4">판매 농장</h3>
               <Link
-                href={`/farms/${product.farmId}`}
+                href={`/farms/${displayProduct.farmId}`}
                 className="block hover:opacity-80 transition-opacity"
               >
                 <div className="aspect-video relative rounded-lg overflow-hidden bg-muted mb-3">
                   <Image
                     src="/sunny-farm-with-greenhouse.jpg"
-                    alt={product.farm}
+                    alt={displayProduct.farm}
                     fill
                     className="object-cover"
                   />
                 </div>
-                <h4 className="font-semibold mb-1">{product.farm}</h4>
-                <p className="text-sm text-muted-foreground mb-3">{product.location}</p>
+                <h4 className="font-semibold mb-1">{displayProduct.farm}</h4>
+                <p className="text-sm text-muted-foreground mb-3">{displayProduct.location}</p>
               </Link>
               <Button variant="outline" className="w-full bg-transparent" asChild>
-                <Link href={`/farms/${product.farmId}`}>농장 방문하기</Link>
+                <Link href={`/farms/${displayProduct.farmId}`}>농장 방문하기</Link>
               </Button>
             </Card>
 

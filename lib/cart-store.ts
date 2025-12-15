@@ -2,6 +2,13 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import {
+  addBuyNowItem,
+  removeBuyNowItem,
+  isBuyNowItem,
+  getBuyNowQuantity,
+  cleanupOldBuyNowItems,
+} from '@/lib/utils/buy-now-storage'
 
 export interface CartItem {
   id: number
@@ -57,6 +64,9 @@ export const useCartStore = create<CartStore>()(
           const buyNowQuantity = item.quantity ?? 1
           console.log('[CartStore] Buy Now mode - quantity:', buyNowQuantity)
 
+          // sessionStorage에 바로 구매 아이템 저장
+          addBuyNowItem(item.id, buyNowQuantity)
+
           if (existingItem) {
             // 기존 아이템이 있으면 원래 수량을 저장하고 선택한 수량으로 임시 변경
             const currentOriginalQuantities = get().buyNowOriginalQuantities
@@ -64,7 +74,7 @@ export const useCartStore = create<CartStore>()(
 
             // 기존 아이템이 isBuyNow가 false인 경우에만 원래 수량 저장
             // (이미 isBuyNow: true인 경우는 원래 수량이 이미 저장되어 있거나, 수량만 업데이트)
-            if (!existingItem.isBuyNow && !newOriginalQuantities[item.id]) {
+            if (!isBuyNowItem(item.id) && !newOriginalQuantities[item.id]) {
               newOriginalQuantities[item.id] = existingItem.quantity
               console.log(
                 '[CartStore] Saved original quantity:',
@@ -79,8 +89,8 @@ export const useCartStore = create<CartStore>()(
               if (i.id === item.id) {
                 return { ...i, quantity: buyNowQuantity, isBuyNow: true }
               }
-              // 다른 아이템은 isBuyNow를 명시적으로 false로 설정 (undefined 방지)
-              return { ...i, isBuyNow: i.isBuyNow ?? false }
+              // 다른 아이템은 sessionStorage를 확인하여 isBuyNow 설정
+              return { ...i, isBuyNow: isBuyNowItem(i.id) }
             })
 
             console.log(
@@ -128,6 +138,7 @@ export const useCartStore = create<CartStore>()(
               quantity: newItem.quantity,
               isBuyNow: newItem.isBuyNow,
             })
+            // sessionStorage에 이미 저장되어 있음 (위에서 addBuyNowItem 호출)
             set({
               items: [...items, newItem],
             })
@@ -200,10 +211,17 @@ export const useCartStore = create<CartStore>()(
         const items = get().items
         const originalQuantities = get().buyNowOriginalQuantities
 
+        // sessionStorage에서 바로 구매 아이템 제거
+        items.forEach((item) => {
+          if (isBuyNowItem(item.id)) {
+            removeBuyNowItem(item.id)
+          }
+        })
+
         // isBuyNow 아이템 처리
         const processedItems = items
           .map((item) => {
-            if (item.isBuyNow) {
+            if (isBuyNowItem(item.id)) {
               // 원래 수량이 저장되어 있으면 복원
               if (originalQuantities[item.id]) {
                 return {
@@ -229,10 +247,17 @@ export const useCartStore = create<CartStore>()(
         const items = get().items
         const originalQuantities = get().buyNowOriginalQuantities
 
+        // sessionStorage에서 바로 구매 아이템 제거
+        items.forEach((item) => {
+          if (isBuyNowItem(item.id)) {
+            removeBuyNowItem(item.id)
+          }
+        })
+
         // isBuyNow 아이템 처리
         const processedItems = items
           .map((item) => {
-            if (item.isBuyNow) {
+            if (isBuyNowItem(item.id)) {
               // 원래 수량이 저장되어 있으면 복원 (장바구니에 있던 아이템)
               if (originalQuantities[item.id]) {
                 return {
@@ -287,14 +312,14 @@ export const useCartStore = create<CartStore>()(
                   '[CartStore] getCheckoutItems - Zustand 복원 실패 감지, localStorage에서 직접 읽기'
                 )
                 // localStorage에서 읽은 아이템을 CartItem 형식으로 변환
+                // sessionStorage를 확인하여 isBuyNow 설정
                 items = storedItems.map((item) => {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const rawIsBuyNow = (item as any).isBuyNow
-                  const isBuyNowValue =
-                    rawIsBuyNow === true || rawIsBuyNow === 'true' || rawIsBuyNow === 1
+                  const buyNowQty = getBuyNowQuantity(item.id)
+                  const isBuyNow = buyNowQty !== null
                   return {
                     ...item,
-                    isBuyNow: isBuyNowValue,
+                    isBuyNow,
+                    quantity: buyNowQty !== null ? buyNowQty : item.quantity,
                   } as CartItem
                 })
                 console.log(
@@ -310,14 +335,28 @@ export const useCartStore = create<CartStore>()(
           }
         }
 
-        const buyNowItems = items.filter((item) => item.isBuyNow === true)
+        // sessionStorage에서 바로 구매 아이템 확인
+        const buyNowItems = items.filter((item) => isBuyNowItem(item.id))
+
+        // sessionStorage에 있는데 items에 없는 경우 수량 업데이트
+        const updatedItems = items.map((item) => {
+          if (isBuyNowItem(item.id)) {
+            const buyNowQty = getBuyNowQuantity(item.id)
+            if (buyNowQty !== null && buyNowQty !== item.quantity) {
+              return { ...item, quantity: buyNowQty, isBuyNow: true }
+            }
+            return { ...item, isBuyNow: true }
+          }
+          return { ...item, isBuyNow: false }
+        })
+
         console.log(
           '[CartStore] getCheckoutItems - buyNowItems after filter:',
           JSON.stringify(
             buyNowItems.map((i) => ({ id: i.id, quantity: i.quantity, isBuyNow: i.isBuyNow }))
           )
         )
-        const result = buyNowItems.length > 0 ? buyNowItems : items
+        const result = buyNowItems.length > 0 ? buyNowItems : updatedItems
         console.log(
           '[CartStore] getCheckoutItems result:',
           JSON.stringify(
@@ -330,7 +369,7 @@ export const useCartStore = create<CartStore>()(
       getCheckoutTotalPrice: () => {
         // getCheckoutItems를 직접 호출 (순환 참조 방지)
         const items = get().items
-        const buyNowItems = items.filter((item) => item.isBuyNow === true)
+        const buyNowItems = items.filter((item) => isBuyNowItem(item.id))
         const checkoutItems = buyNowItems.length > 0 ? buyNowItems : items
         return checkoutItems.reduce((total, item) => total + item.price * item.quantity, 0)
       },
@@ -338,14 +377,19 @@ export const useCartStore = create<CartStore>()(
     {
       name: 'barofarm-cart',
       onRehydrateStorage: () => (state, error) => {
-        // localStorage에서 복원 후 isBuyNow가 제대로 처리되도록 보장
+        // 오래된 sessionStorage 아이템 정리
+        if (typeof window !== 'undefined') {
+          cleanupOldBuyNowItems()
+        }
+
+        // localStorage에서 복원 후 sessionStorage와 동기화
         console.log('[CartStore] onRehydrateStorage called:', {
           hasState: !!state,
           error,
           items: state?.items?.map((i) => ({
             id: i.id,
             quantity: i.quantity,
-            isBuyNow: i.isBuyNow,
+            isBuyNow: isBuyNowItem(i.id),
           })),
         })
 
@@ -380,21 +424,20 @@ export const useCartStore = create<CartStore>()(
           // localStorage에서 직접 가져온 items를 우선 사용 (더 최신일 수 있음)
           const itemsToFix = localStorageItems || state.items
 
-          // isBuyNow를 명시적으로 처리 (JSON.parse 후 타입이 변경될 수 있으므로 안전하게 처리)
+          // sessionStorage를 확인하여 isBuyNow 설정
           state.items = itemsToFix.map((item) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const rawIsBuyNow = (item as any).isBuyNow
-            const isBuyNowValue =
-              rawIsBuyNow === true || rawIsBuyNow === 'true' || rawIsBuyNow === 1
+            const buyNowQty = getBuyNowQuantity(item.id)
+            const isBuyNow = buyNowQty !== null
             const fixed = {
               ...item,
-              isBuyNow: isBuyNowValue,
+              isBuyNow,
+              // sessionStorage에 수량이 있으면 업데이트
+              quantity: buyNowQty !== null ? buyNowQty : item.quantity,
             }
             console.log('[CartStore] onRehydrateStorage fix item:', {
               id: item.id,
-              originalIsBuyNow: rawIsBuyNow,
-              originalIsBuyNowType: typeof rawIsBuyNow,
-              fixedIsBuyNow: fixed.isBuyNow,
+              isBuyNow,
+              quantity: fixed.quantity,
             })
             return fixed
           })
@@ -460,22 +503,20 @@ export const useCartStore = create<CartStore>()(
           )
 
           if (itemsToMerge) {
-            // items의 isBuyNow를 명시적으로 처리
+            // sessionStorage를 확인하여 isBuyNow 설정
             const mergedItems = itemsToMerge.map((item) => {
-              // isBuyNow가 true인지 확인 (JSON.parse 후 타입이 변경될 수 있으므로 안전하게 처리)
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const rawIsBuyNow = (item as any).isBuyNow
-              const isBuyNowValue =
-                rawIsBuyNow === true || rawIsBuyNow === 'true' || rawIsBuyNow === 1
+              const buyNowQty = getBuyNowQuantity(item.id)
+              const isBuyNow = buyNowQty !== null
               const merged = {
                 ...item,
-                isBuyNow: isBuyNowValue,
+                isBuyNow,
+                // sessionStorage에 수량이 있으면 업데이트
+                quantity: buyNowQty !== null ? buyNowQty : item.quantity,
               }
               console.log('[CartStore] merge item:', {
                 id: item.id,
-                originalIsBuyNow: rawIsBuyNow,
-                originalIsBuyNowType: typeof rawIsBuyNow,
-                mergedIsBuyNow: merged.isBuyNow,
+                isBuyNow,
+                quantity: merged.quantity,
               })
               return merged
             })
@@ -503,14 +544,14 @@ export const useCartStore = create<CartStore>()(
           }
           const itemsToMerge = localStorageItems || persisted.items
           if (itemsToMerge) {
+            // sessionStorage를 확인하여 isBuyNow 설정
             const mergedItems = itemsToMerge.map((item) => {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const rawIsBuyNow = (item as any).isBuyNow
-              const isBuyNowValue =
-                rawIsBuyNow === true || rawIsBuyNow === 'true' || rawIsBuyNow === 1
+              const buyNowQty = getBuyNowQuantity(item.id)
+              const isBuyNow = buyNowQty !== null
               return {
                 ...item,
-                isBuyNow: isBuyNowValue,
+                isBuyNow,
+                quantity: buyNowQty !== null ? buyNowQty : item.quantity,
               }
             })
             return {
