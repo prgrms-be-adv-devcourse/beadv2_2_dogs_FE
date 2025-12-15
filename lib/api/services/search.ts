@@ -11,7 +11,14 @@ import type {
 export const searchService = {
   // 통합 검색
   async search(params: SearchParams): Promise<UnifiedSearchResponse> {
-    return searchApi.get<UnifiedSearchResponse>('/api/v1/search', { params })
+    // API 요구사항에 맞춰 keyword를 q로 매핑 및 엔드포인트 변경
+    const queryParams: Record<string, any> = {
+      q: params.keyword,
+      type: params.type,
+      page: params.page,
+      size: params.size,
+    }
+    return searchApi.get<UnifiedSearchResponse>('/api/v1/search', { params: queryParams })
   },
 
   // 통합 자동완성
