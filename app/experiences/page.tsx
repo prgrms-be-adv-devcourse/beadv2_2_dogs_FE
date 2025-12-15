@@ -19,6 +19,7 @@ import {
 import { experienceService } from '@/lib/api/services/experience'
 import { useEffect } from 'react'
 import type { Experience } from '@/lib/api/types'
+import { ExperienceCard } from '@/components/product/experience-card'
 
 export default function ExperiencesPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -152,9 +153,9 @@ export default function ExperiencesPage() {
           id: exp.id,
           title: exp.title,
           farm: exp.farmName || '',
-          location: exp.location || '',
+          location: exp.farmLocation || '',
           price: exp.pricePerPerson || 0,
-          image: exp.imageUrl || '/placeholder.svg',
+          image: exp.images?.[0] || '/placeholder.svg',
           duration: `${exp.duration || 2}시간`, // TODO: 실제 duration 형식에 맞게 변환
           capacity: `최대 ${exp.maxParticipants || 10}명`,
           rating: exp.rating || 0,
@@ -190,7 +191,7 @@ export default function ExperiencesPage() {
         filtered.sort((a, b) => b.reviews - a.reviews)
         break
       case 'latest':
-        filtered.sort((a, b) => b.id - a.id)
+        filtered.sort((a, b) => String(b.id).localeCompare(String(a.id)))
         break
       case 'low-price':
         filtered.sort((a, b) => a.price - b.price)
@@ -317,48 +318,18 @@ export default function ExperiencesPage() {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredAndSortedExperiences.map((exp, index) => (
-                <Card
+                <ExperienceCard
                   key={exp.id}
-                  className="overflow-hidden group hover:shadow-lg transition-shadow"
-                >
-                  <Link href={`/experiences/${exp.id}`}>
-                    <div className="relative h-48 overflow-hidden bg-muted">
-                      <Image
-                        src={exp.image || '/placeholder.svg'}
-                        alt={exp.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform"
-                        priority={index === 0}
-                      />
-                      <Badge className="absolute top-3 left-3">{exp.tag}</Badge>
-                    </div>
-                    <div className="p-5">
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
-                        <MapPin className="h-3 w-3" />
-                        <span>{exp.farm}</span>
-                        <span className="mx-1">•</span>
-                        <span>{exp.location}</span>
-                      </div>
-                      <h3 className="text-lg font-semibold mb-3">{exp.title}</h3>
-                      <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground mb-4">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{exp.duration}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          <span>{exp.capacity}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-xl font-bold text-primary">
-                          {exp.price.toLocaleString()}원
-                        </div>
-                        <div className="text-sm text-muted-foreground">1인 기준</div>
-                      </div>
-                    </div>
-                  </Link>
-                </Card>
+                  id={exp.id}
+                  title={exp.title}
+                  farm={exp.farm}
+                  location={exp.location}
+                  price={exp.price}
+                  image={exp.image}
+                  duration={exp.duration}
+                  capacity={exp.capacity}
+                  className={index === 0 ? 'md:col-span-2 lg:col-span-1' : ''}
+                />
               ))}
             </div>
           )}

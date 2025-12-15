@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select'
 import { productService } from '@/lib/api/services/product'
 import type { Product } from '@/lib/api/types'
+import { ProductCard } from '@/components/product/product-card'
 
 export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -316,46 +317,21 @@ export default function ProductsPage() {
               </Button>
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
               {filteredAndSortedProducts.map((product) => (
-                <Card
+                <ProductCard
                   key={product.id}
-                  className="overflow-hidden group hover:shadow-lg transition-shadow"
-                >
-                  <Link href={`/products/${product.id}`}>
-                    <div className="relative aspect-square overflow-hidden bg-muted">
-                      <Image
-                        src={product.image || '/placeholder.svg'}
-                        alt={product.name}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform"
-                      />
-                      <Badge className="absolute top-3 left-3">{product.tag}</Badge>
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
-                        <MapPin className="h-3 w-3" />
-                        <span>{product.farm}</span>
-                        <span className="mx-1">•</span>
-                        <span>{product.location}</span>
-                      </div>
-                      <h3 className="font-semibold mb-2">{product.name}</h3>
-                      <div className="flex items-center gap-1 mb-3">
-                        <Star className="h-4 w-4 fill-primary text-primary" />
-                        <span className="text-sm font-medium">{product.rating}</span>
-                        <span className="text-sm text-muted-foreground">({product.reviews})</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold">
-                          {product.price.toLocaleString()}원
-                        </span>
-                        <span className="text-sm text-muted-foreground line-through">
-                          {product.originalPrice.toLocaleString()}원
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                </Card>
+                  id={product.id}
+                  name={product.name}
+                  farm={product.farm}
+                  location={product.location}
+                  price={product.price}
+                  originalPrice={product.originalPrice}
+                  image={product.image}
+                  rating={product.rating}
+                  reviews={product.reviews}
+                  tag={product.tag}
+                />
               ))}
             </div>
           )}
