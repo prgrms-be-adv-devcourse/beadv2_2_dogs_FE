@@ -43,6 +43,25 @@ export const getAccessToken = (): string | null => {
   return accessToken
 }
 
+// JWT 토큰에서 userId 추출
+export const getUserIdFromToken = (): string | null => {
+  const token = getAccessToken()
+  if (!token) return null
+
+  try {
+    // JWT는 base64로 인코딩된 3부분으로 구성: header.payload.signature
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+
+    // payload 디코딩
+    const payload = JSON.parse(atob(parts[1]))
+    return payload.uid || payload.userId || null
+  } catch (error) {
+    console.error('Failed to decode token:', error)
+    return null
+  }
+}
+
 // API Client Class
 class ApiClient {
   private baseUrl: string
@@ -89,6 +108,12 @@ class ApiClient {
     const token = getAccessToken()
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
+
+      // JWT 토큰에서 userId 추출하여 X-User-Id 헤더 추가
+      const userId = getUserIdFromToken()
+      if (userId) {
+        headers['X-User-Id'] = userId
+      }
     }
 
     try {
@@ -107,6 +132,24 @@ class ApiClient {
           }
         } catch {
           // JSON 파싱 실패 시 빈 객체 사용
+        }
+
+        // 404 응답의 경우, 일부 API는 정상 응답일 수 있음 (예: 예치금 계정 없음)
+        // 하지만 일반적으로는 에러로 처리
+        if (response.status === 404) {
+          // ResponseDto 형식의 404 응답인 경우 (status 필드가 있음)
+          if (errorData.status === 404 && errorData.message) {
+            // 예치금 계정이 없는 경우 등 정상적인 404 응답
+            throw {
+              status: response.status,
+              message: errorData.message as string,
+              code: 'NOT_FOUND',
+              details: errorData.message as string,
+              error: errorData.error,
+              path: errorData.path || url,
+              timestamp: errorData.timestamp,
+            } as ApiError
+          }
         }
 
         // 에러 메시지 추출 (다양한 형식 지원)

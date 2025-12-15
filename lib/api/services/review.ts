@@ -1,40 +1,43 @@
 import { reviewApi } from '../client'
-import type { Review, CreateReviewRequest, PaginatedResponse, PaginationParams } from '../types'
+import type {
+  Review,
+  ReviewCreateRequest,
+  ReviewUpdateRequest,
+  PaginatedResponse,
+  PaginationParams,
+} from '../types'
 
 export const reviewService = {
-  // 리뷰 목록 조회 (상품/체험/농장별) (Support Service - /api/v1/ 패턴 적용)
-  async getReviews(
-    targetType: 'PRODUCT' | 'EXPERIENCE' | 'FARM',
-    targetId: number,
+  // 상품 리뷰 목록 조회
+  async getProductReviews(
+    productId: string,
     params?: PaginationParams
   ): Promise<PaginatedResponse<Review>> {
-    return reviewApi.get<PaginatedResponse<Review>>(`/api/v1/reviews/${targetType}/${targetId}`, {
-      params,
-    })
+    return reviewApi.get<PaginatedResponse<Review>>(`/products/${productId}/reviews`, { params })
   },
 
-  // 리뷰 작성
-  async createReview(data: CreateReviewRequest): Promise<Review> {
-    return reviewApi.post<Review>('/api/v1/reviews', data)
-  },
-
-  // 리뷰 수정
-  async updateReview(id: number, data: Partial<CreateReviewRequest>): Promise<Review> {
-    return reviewApi.put<Review>(`/api/v1/reviews/${id}`, data)
-  },
-
-  // 리뷰 삭제
-  async deleteReview(id: number): Promise<void> {
-    return reviewApi.delete(`/api/v1/reviews/${id}`)
-  },
-
-  // 리뷰 도움됨 표시
-  async markHelpful(id: number): Promise<void> {
-    return reviewApi.post(`/api/v1/reviews/${id}/helpful`)
+  // 제품 리뷰 등록
+  async createProductReview(productId: string, data: ReviewCreateRequest): Promise<Review> {
+    return reviewApi.post<Review>(`/products/${productId}/reviews`, data)
   },
 
   // 내 리뷰 목록 조회
   async getMyReviews(params?: PaginationParams): Promise<PaginatedResponse<Review>> {
-    return reviewApi.get<PaginatedResponse<Review>>('/api/v1/reviews/my', { params })
+    return reviewApi.get<PaginatedResponse<Review>>('/me/reviews', { params })
+  },
+
+  // 리뷰 상세 조회
+  async getReview(reviewId: string): Promise<Review> {
+    return reviewApi.get<Review>(`/reviews/${reviewId}`)
+  },
+
+  // 리뷰 수정
+  async updateReview(reviewId: string, data: ReviewUpdateRequest): Promise<Review> {
+    return reviewApi.put<Review>(`/reviews/${reviewId}`, data)
+  },
+
+  // 리뷰 삭제
+  async deleteReview(reviewId: string): Promise<void> {
+    return reviewApi.delete(`/reviews/${reviewId}`)
   },
 }

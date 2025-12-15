@@ -38,20 +38,29 @@
 const GATEWAY_BASE = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:8080'
 
 export const API_URLS = {
-  AUTH: GATEWAY_BASE,
-  BUYER: GATEWAY_BASE,
-  CART: GATEWAY_BASE,
-  PRODUCT: GATEWAY_BASE,
-  SELLER: GATEWAY_BASE,
-  FARM: GATEWAY_BASE,
-  ORDER: GATEWAY_BASE,
-  PAYMENT: GATEWAY_BASE,
-  SETTLEMENT: GATEWAY_BASE,
-  DELIVERY: GATEWAY_BASE,
-  NOTIFICATION: GATEWAY_BASE,
-  EXPERIENCE: GATEWAY_BASE,
-  SEARCH: GATEWAY_BASE,
-  REVIEW: GATEWAY_BASE,
+  // Auth Service
+  AUTH: `${GATEWAY_BASE}/auth-service/api/v1`,
+
+  // Buyer Service (상품, 장바구니, 재고)
+  BUYER: `${GATEWAY_BASE}/buyer-service/api/v1`,
+  CART: `${GATEWAY_BASE}/buyer-service/api/v1`,
+  PRODUCT: `${GATEWAY_BASE}/buyer-service/api/v1`,
+
+  // Seller Service (판매자, 농장)
+  SELLER: `${GATEWAY_BASE}/seller-service/api/v1`,
+  FARM: `${GATEWAY_BASE}/seller-service/api/v1`,
+
+  // Order Service (주문, 결제, 예치금)
+  ORDER: `${GATEWAY_BASE}/order-service/api/v1`,
+  PAYMENT: `${GATEWAY_BASE}/order-service/api/v1`,
+
+  // Support Service (체험, 예약, 리뷰, 배송, 검색, 정산, 알림)
+  SETTLEMENT: `${GATEWAY_BASE}/support-service/api/v1`,
+  DELIVERY: `${GATEWAY_BASE}/support-service/api/v1`,
+  NOTIFICATION: `${GATEWAY_BASE}/support-service/api/v1`,
+  EXPERIENCE: `${GATEWAY_BASE}/support-service/api/v1`,
+  SEARCH: `${GATEWAY_BASE}/support-service/api/v1`,
+  REVIEW: `${GATEWAY_BASE}/support-service/api/v1`,
 } as const
 
 // 그리고 .env.local에:

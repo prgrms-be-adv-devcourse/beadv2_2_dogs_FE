@@ -10,14 +10,37 @@ import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
 import { Header } from '@/components/layout/header'
+import { cartService } from '@/lib/api/services/cart'
+import { useEffect, useState } from 'react'
 
 export default function CartPage() {
   const router = useRouter()
   const { items, updateQuantity, removeItem, getTotalPrice, addItem } = useCartStore()
   const { toast } = useToast()
+  const [mounted, setMounted] = useState(false)
+
+  // 클라이언트에서만 마운트 확인 (Hydration 에러 방지)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // TODO: 서버 장바구니와 동기화
+  // useEffect(() => {
+  //   const syncCart = async () => {
+  //     try {
+  //       const serverCart = await cartService.getCart()
+  //       // 서버 장바구니와 로컬 장바구니 병합 로직
+  //     } catch (error) {
+  //       console.error('장바구니 동기화 실패:', error)
+  //     }
+  //   }
+  //   if (mounted) {
+  //     syncCart()
+  //   }
+  // }, [mounted])
 
   const deliveryFee = 0 // 무료 배송
-  const totalPrice = getTotalPrice()
+  const totalPrice = mounted ? getTotalPrice() : 0
   const finalPrice = totalPrice + deliveryFee
 
   const handleCheckout = () => {

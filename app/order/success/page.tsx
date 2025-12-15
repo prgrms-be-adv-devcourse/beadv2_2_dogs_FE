@@ -5,11 +5,11 @@ import { Card } from '@/components/ui/card'
 import { Sprout, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { paymentService } from '@/lib/api/services/payment'
 import { useToast } from '@/hooks/use-toast'
 
-export default function OrderSuccessPage() {
+function OrderSuccessPageContent() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   // 토스페이먼츠가 자동으로 추가하는 파라미터들
@@ -37,7 +37,11 @@ export default function OrderSuccessPage() {
         })
 
         // paymentService를 사용하여 결제 승인 API 호출
-        const data = await paymentService.confirmPayment(paymentKey, orderId, paymentAmount)
+        const data = await paymentService.confirmPayment({
+          paymentKey,
+          orderId,
+          amount: paymentAmount,
+        })
 
         // 결제 승인 성공
         toast({
@@ -103,5 +107,19 @@ export default function OrderSuccessPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          로딩 중...
+        </div>
+      }
+    >
+      <OrderSuccessPageContent />
+    </Suspense>
   )
 }

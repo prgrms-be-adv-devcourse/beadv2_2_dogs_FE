@@ -1,34 +1,50 @@
-import { paymentApi } from '../client'
-import type { Payment, CreatePaymentRequest } from '../types'
+import { paymentApi, orderApi } from '../client'
+import type {
+  TossPaymentConfirmRequest,
+  TossPaymentRefundRequest,
+  DepositChargeCreateRequest,
+  DepositPaymentRequest,
+  DepositRefundRequest,
+  Payment,
+} from '../types'
 
 export const paymentService = {
-  // 결제 생성 (Order Service - 일반 패턴 적용, v1 여부는 백엔드 확인 필요)
-  async createPayment(data: CreatePaymentRequest): Promise<Payment> {
-    return paymentApi.post<Payment>('/api/v1/payments', data)
+  // 토스 결제 승인
+  async confirmPayment(data: TossPaymentConfirmRequest): Promise<Payment> {
+    return paymentApi.post<Payment>('/payments/toss/confirm', data)
   },
 
-  // 결제 조회
-  async getPayment(id: number): Promise<Payment> {
-    return paymentApi.get<Payment>(`/api/v1/payments/${id}`)
+  // 토스 결제 환불
+  async refundPayment(data: TossPaymentRefundRequest): Promise<Payment> {
+    return paymentApi.post<Payment>('/payments/toss/refund', data)
   },
 
-  // 주문별 결제 조회
-  async getPaymentByOrder(orderId: number): Promise<Payment> {
-    return paymentApi.get<Payment>(`/api/v1/payments/order/${orderId}`)
+  // 토스 예치금 충전 승인
+  async confirmDeposit(data: TossPaymentConfirmRequest): Promise<Payment> {
+    return paymentApi.post<Payment>('/payments/toss/confirm/deposit', data)
+  },
+}
+
+export const depositService = {
+  // 예치금 조회
+  async getDeposit(): Promise<{ balance: number }> {
+    return orderApi.get<{ balance: number }>('/deposits')
   },
 
-  // 결제 취소
-  async cancelPayment(id: number, reason?: string): Promise<Payment> {
-    return paymentApi.post<Payment>(`/api/v1/payments/${id}/cancel`, { reason })
+  // 예치금 충전 요청 생성
+  async createCharge(
+    data: DepositChargeCreateRequest
+  ): Promise<{ chargeId: string; amount: number }> {
+    return orderApi.post<{ chargeId: string; amount: number }>('/deposits/charges', data)
   },
 
-  // 결제 확인 (PG 콜백) - 토스페이먼츠 결제 승인
-  // 서버에서 시크릿 키를 사용하여 결제 승인 처리
-  async confirmPayment(paymentKey: string, orderId: string, amount: number): Promise<Payment> {
-    return paymentApi.post<Payment>('/api/v1/payments/confirm', {
-      paymentKey,
-      orderId,
-      amount,
-    })
+  // 예치금으로 주문 결제
+  async payWithDeposit(data: DepositPaymentRequest): Promise<Payment> {
+    return orderApi.post<Payment>('/deposits/pay', data)
+  },
+
+  // 예치금 결제 환불
+  async refundDeposit(data: DepositRefundRequest): Promise<Payment> {
+    return orderApi.post<Payment>('/deposits/refund', data)
   },
 }

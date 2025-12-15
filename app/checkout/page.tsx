@@ -2,7 +2,7 @@
 
 import type React from 'react'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,8 @@ import { useAddressStore } from '@/lib/address-store'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { orderService } from '@/lib/api/services/order'
+import { depositService } from '@/lib/api/services/payment'
+import { getBuyNowItems, isBuyNowItem } from '@/lib/utils/buy-now-storage'
 import {
   Select,
   SelectContent,
@@ -27,23 +29,21 @@ import { AddressDialog } from '@/components/address/address-dialog'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Checkbox } from '@/components/ui/checkbox'
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const isBuyNow = searchParams.get('buyNow') === 'true'
-  const {
-    items,
-    getCheckoutItems,
-    getCheckoutTotalPrice,
-    clearBuyNowItems,
-    restoreBuyNowItems,
-    setState,
-  } = useCartStore()
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // sessionStorage에서 바로 구매 아이템 확인
+  const buyNowItems = mounted ? getBuyNowItems() : []
+  const isBuyNow = searchParams.get('buyNow') === 'true' || buyNowItems.length > 0
+
+  const { items, getCheckoutItems, getCheckoutTotalPrice, clearBuyNowItems, restoreBuyNowItems } =
+    useCartStore()
   const { addresses, selectedAddressId, addAddress, updateAddress, deleteAddress, selectAddress } =
     useAddressStore()
   const { toast } = useToast()
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false)
   const [editingAddress, setEditingAddress] = useState<number | null>(null)
   const [useSavedAddress, setUseSavedAddress] = useState(false)
@@ -61,15 +61,17 @@ export default function CheckoutPage() {
   useEffect(() => {
     const fetchDepositBalance = async () => {
       try {
-        // TODO: API 연동 - 예치금 조회 API 호출
-        // const response = await userService.getDepositBalance()
-        // setDepositBalance(response.balance)
-
-        // 임시 데이터 (API 연동 전까지)
-        setDepositBalance(50000)
-      } catch (error) {
+        const response = await depositService.getDeposit()
+        setDepositBalance(response.balance)
+      } catch (error: any) {
         console.error('예치금 조회 실패:', error)
-        setDepositBalance(0)
+        // 404 에러인 경우 예치금 계정이 없는 것으로 처리 (정상)
+        if (error?.status === 404) {
+          setDepositBalance(0)
+        } else {
+          // 다른 에러인 경우도 0으로 설정
+          setDepositBalance(0)
+        }
       }
     }
 
@@ -153,7 +155,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (mounted && addresses.length > 0) {
       const defaultAddress = addresses.find((addr) => addr.isDefault) || addresses[0]
-      if (defaultAddress) {
+      if (defaultAddress && defaultAddress.id != null) {
         selectAddress(defaultAddress.id)
         // 기본 배송지 사용 여부는 사용자가 선택하도록 함
         setUseSavedAddress(false)
@@ -166,15 +168,15 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (useSavedAddress && addresses.length > 0) {
       const defaultAddress = addresses.find((addr) => addr.isDefault) || addresses[0]
-      if (defaultAddress) {
+      if (defaultAddress && defaultAddress.id != null) {
         selectAddress(defaultAddress.id)
         setFormData((prev) => ({
           ...prev,
-          name: defaultAddress.name,
-          phone: defaultAddress.phone,
-          zipCode: defaultAddress.zipCode,
-          address: defaultAddress.address,
-          addressDetail: defaultAddress.detailAddress,
+          name: defaultAddress.name || '',
+          phone: defaultAddress.phone || '',
+          zipCode: defaultAddress.zipCode || '',
+          address: defaultAddress.address || '',
+          addressDetail: defaultAddress.detailAddress || '',
         }))
       }
     } else if (!useSavedAddress) {
@@ -188,7 +190,7 @@ export default function CheckoutPage() {
         addressDetail: '',
       }))
     }
-  }, [useSavedAddress, addresses])
+  }, [useSavedAddress, addresses, selectAddress])
 
   // localStorage에서 바로 구매 아이템을 강제로 복원 (Zustand persist가 복원하지 못한 경우 대비)
   useEffect(() => {
@@ -208,9 +210,14 @@ export default function CheckoutPage() {
         if (!storedItems || storedItems.length === 0) return
 
         // 바로 구매 아이템이 있는지 확인
-        const buyNowItems = storedItems.filter(
-          (i) => i.isBuyNow === true || i.isBuyNow === 'true' || i.isBuyNow === 1
-        )
+        const buyNowItems = storedItems.filter((i) => {
+          const isBuyNow = i.isBuyNow
+          return (
+            isBuyNow === true ||
+            (typeof isBuyNow === 'string' && isBuyNow === 'true') ||
+            (typeof isBuyNow === 'number' && isBuyNow === 1)
+          )
+        })
 
         if (buyNowItems.length > 0 && items.length === 0) {
           console.log('[Checkout] Zustand 복원 실패 감지, localStorage에서 강제 복원 시도')
@@ -323,9 +330,14 @@ export default function CheckoutPage() {
               const parsed = JSON.parse(stored) as {
                 state?: { items?: Array<{ id: number; isBuyNow?: boolean }> }
               }
-              const buyNowItems = parsed.state?.items?.filter(
-                (i) => i.isBuyNow === true || i.isBuyNow === 'true' || i.isBuyNow === 1
-              )
+              const buyNowItems = parsed.state?.items?.filter((i) => {
+                const isBuyNow = i.isBuyNow
+                return (
+                  isBuyNow === true ||
+                  (typeof isBuyNow === 'string' && isBuyNow === 'true') ||
+                  (typeof isBuyNow === 'number' && isBuyNow === 1)
+                )
+              })
               // 바로 구매 아이템이 있으면 리다이렉트하지 않음 (Zustand가 곧 복원할 것)
               if (buyNowItems && buyNowItems.length > 0) {
                 hasBuyNowInStorage = true // 플래그 설정
@@ -426,9 +438,14 @@ export default function CheckoutPage() {
             const parsed = JSON.parse(stored) as {
               state?: { items?: Array<{ id: number; isBuyNow?: boolean }> }
             }
-            const buyNowItems = parsed.state?.items?.filter(
-              (i) => i.isBuyNow === true || i.isBuyNow === 'true' || i.isBuyNow === 1
-            )
+            const buyNowItems = parsed.state?.items?.filter((i) => {
+              const isBuyNow = i.isBuyNow
+              return (
+                isBuyNow === true ||
+                (typeof isBuyNow === 'string' && isBuyNow === 'true') ||
+                (typeof isBuyNow === 'number' && isBuyNow === 1)
+              )
+            })
             if (buyNowItems && buyNowItems.length > 0) {
               finalHasBuyNow = true
             }
@@ -616,17 +633,26 @@ export default function CheckoutPage() {
         let orderName: string
 
         try {
-          const defaultAddress = addresses.find((addr) => addr.isDefault) || addresses[0]
-          const orderResponse = await orderService.createOrder({
+          // 주문 생성 요청 데이터 구성
+          const orderRequest = {
+            receiverName: formData.name,
+            phone: formData.phone,
+            email: formData.email,
+            zipCode: formData.zipCode,
+            address: formData.address,
+            addressDetail: formData.addressDetail,
+            deliveryMemo: formData.deliveryNote || undefined,
             items: checkoutItems.map((item) => ({
-              productId: item.id,
+              productId: String(item.id), // UUID로 변환 (임시: 실제로는 UUID여야 함)
+              sellerId: '', // TODO: 실제 sellerId를 가져와야 함 (임시 빈 문자열)
               quantity: item.quantity,
+              unitPrice: item.price,
             })),
-            shippingAddressId: useSavedAddress && defaultAddress ? defaultAddress.id : 0, // TODO: 직접 입력 시 주소 저장 후 ID 사용
-            paymentMethod: 'toss',
-          })
+          }
 
-          orderId = orderResponse.orderNumber || `ORDER-${orderResponse.id}`
+          const orderResponse = await orderService.createOrder(orderRequest)
+
+          orderId = orderResponse.orderId || `ORDER-${orderResponse.orderId}`
           orderName =
             checkoutItems.length === 1
               ? checkoutItems[0].name
@@ -675,7 +701,6 @@ export default function CheckoutPage() {
         })
 
         await tossWidget.requestPayment('간편결제', {
-          company: '토스페이',
           orderId: orderId,
           amount: finalPrice,
           orderName: orderName,
@@ -807,7 +832,11 @@ export default function CheckoutPage() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEditAddress(address.id)}
+                            onClick={() => {
+                              if (address.id != null) {
+                                handleEditAddress(address.id)
+                              }
+                            }}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -1054,5 +1083,19 @@ export default function CheckoutPage() {
         />
       </div>
     </div>
+  )
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          로딩 중...
+        </div>
+      }
+    >
+      <CheckoutPageContent />
+    </Suspense>
   )
 }

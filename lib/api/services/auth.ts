@@ -1,97 +1,100 @@
 import { authApi, setAccessToken } from '../client'
 import type {
-  User,
   LoginRequest,
-  LoginResponse,
+  LoginResult,
   SignupRequest,
+  SignUpResult,
   FarmerSignupRequest,
+  MeResponse,
+  TokenResult,
+  SendCodeRequest,
+  VerifyCodeRequest,
+  RefreshTokenRequest,
+  PasswordResetRequest,
+  PasswordResetConfirmRequest,
+  PasswordChangeRequest,
+  LogoutRequest,
 } from '../types'
 
 export const authService = {
-  // 일반 로그인 (Gateway를 통해 접근: POST /api/auth/login)
-  async login(data: LoginRequest): Promise<LoginResponse> {
-    const response = await authApi.post<LoginResponse>('/api/auth/login', data)
+  // 일반 로그인
+  async login(data: LoginRequest): Promise<LoginResult> {
+    const response = await authApi.post<LoginResult>('/auth/login', data)
     setAccessToken(response.accessToken)
     return response
   },
 
-  // 농가 로그인 (추가 엔드포인트가 있다면 사용)
-  async farmerLogin(data: LoginRequest): Promise<LoginResponse> {
-    const response = await authApi.post<LoginResponse>('/api/auth/login', data)
+  // 농가 로그인
+  async farmerLogin(data: LoginRequest): Promise<LoginResult> {
+    const response = await authApi.post<LoginResult>('/auth/login', data)
     setAccessToken(response.accessToken)
     return response
   },
 
-  // 일반 회원가입 (Gateway를 통해 접근: POST /api/auth/signup)
-  async signup(data: SignupRequest): Promise<User> {
-    return authApi.post<User>('/api/auth/signup', data)
+  // 일반 회원가입
+  async signup(data: SignupRequest): Promise<SignUpResult> {
+    const response = await authApi.post<SignUpResult>('/auth/signup', data)
+    setAccessToken(response.accessToken)
+    return response
   },
 
-  // 농가 회원가입 (Gateway를 통해 접근: POST /api/auth/signup)
-  async farmerSignup(data: FarmerSignupRequest): Promise<User> {
-    return authApi.post<User>('/api/auth/signup', data)
+  // 농가 회원가입
+  async farmerSignup(data: FarmerSignupRequest): Promise<SignUpResult> {
+    const response = await authApi.post<SignUpResult>('/auth/signup', data)
+    setAccessToken(response.accessToken)
+    return response
   },
 
-  // 로그아웃 (Gateway를 통해 접근: POST /api/auth/logout)
-  async logout(): Promise<void> {
-    await authApi.post('/api/auth/logout')
+  // 로그아웃
+  async logout(data?: LogoutRequest): Promise<void> {
+    await authApi.post('/auth/logout', data || {})
     setAccessToken(null)
   },
 
-  // 토큰 갱신 (Gateway를 통해 접근: POST /api/auth/refresh)
-  async refreshToken(refreshToken: string): Promise<LoginResponse> {
-    const response = await authApi.post<LoginResponse>('/api/auth/refresh', { refreshToken })
+  // 토큰 갱신
+  async refreshToken(refreshToken: string): Promise<TokenResult> {
+    const response = await authApi.post<TokenResult>('/auth/refresh', {
+      refreshToken,
+    } as RefreshTokenRequest)
     setAccessToken(response.accessToken)
     return response
   },
 
-  // 현재 사용자 정보 조회 (Gateway를 통해 접근: GET /api/auth/me)
-  async getCurrentUser(): Promise<User> {
-    return authApi.get<User>('/api/auth/me')
+  // 현재 사용자 정보 조회
+  async getCurrentUser(): Promise<MeResponse> {
+    return authApi.get<MeResponse>('/auth/me')
   },
 
-  // 비밀번호 재설정 코드 발송 (Gateway를 통해 접근: POST /api/auth/password/reset/request)
+  // 비밀번호 재설정 코드 발송
   async requestPasswordReset(email: string): Promise<void> {
-    return authApi.post('/api/auth/password/reset/request', { email })
+    return authApi.post('/auth/password/reset/request', { email } as PasswordResetRequest)
   },
 
-  // 비밀번호 재설정 완료 (Gateway를 통해 접근: POST /api/auth/password/reset/confirm)
-  async resetPassword(data: { email: string; code: string; newPassword: string }): Promise<void> {
-    return authApi.post('/api/auth/password/reset/confirm', data)
+  // 비밀번호 재설정 완료
+  async resetPassword(data: PasswordResetConfirmRequest): Promise<void> {
+    return authApi.post('/auth/password/reset/confirm', data)
   },
 
-  // 이메일 인증 코드 요청
-  // async requestEmailVerification(email: string): Promise<void> {
-  //   return authApi.post('/api/auth/email/verification-request', { email })
-  // },
+  // 비밀번호 변경
+  async changePassword(data: PasswordChangeRequest): Promise<void> {
+    return authApi.post('/auth/password/change', data)
+  },
 
-  // 이메일 인증 코드 요청 (send-code)
+  // 이메일 인증 코드 발송
   async requestEmailVerification(email: string): Promise<void> {
-    return authApi.post('/api/auth/verification/email/send-code', { email })
+    return authApi.post('/auth/verification/email/send-code', { email } as SendCodeRequest)
   },
 
-  // 이메일 인증코드 검증 (Gateway를 통해 접근: POST /api/auth/verification/email/verify)
+  // 이메일 인증코드 검증
   async verifyEmailCode(email: string, code: string): Promise<{ verified: boolean }> {
-    return authApi.post('/api/auth/verification/email/verify', { email, code })
+    return authApi.post('/auth/verification/email/verify-code', {
+      email,
+      code,
+    } as VerifyCodeRequest)
   },
 
-  // 이메일 인증 (토큰 기반) - 스웨거에 없음, 필요시 추가
-  async verifyEmail(token: string): Promise<void> {
-    return authApi.post('/api/auth/verify-email', { token })
-  },
-
-  // 판매자 권한 부여 (Gateway를 통해 접근: POST /api/auth/{userId}/grant-seller)
-  async grantSellerRole(userId: string): Promise<User> {
-    return authApi.post<User>(`/api/auth/${userId}/grant-seller`)
-  },
-
-  // 판매자 전환 요청 (기존 메서드 유지)
-  async requestSellerRole(data: {
-    farmName: string
-    farmAddress: string
-    farmDescription?: string
-    businessNumber?: string
-  }): Promise<User> {
-    return authApi.post('/api/auth/request-seller-role', data)
+  // 판매자 권한 부여
+  async grantSellerRole(userId: string): Promise<void> {
+    return authApi.post<void>(`/auth/${userId}/grant-seller`)
   },
 }

@@ -5,8 +5,9 @@ import { Card } from '@/components/ui/card'
 import { Sprout, XCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 
-export default function OrderFailPage() {
+function OrderFailPageContent() {
   const searchParams = useSearchParams()
   // 토스페이먼츠가 자동으로 추가하는 파라미터들
   const orderId = searchParams.get('orderId') || '알 수 없음'
@@ -54,5 +55,19 @@ export default function OrderFailPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function OrderFailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          로딩 중...
+        </div>
+      }
+    >
+      <OrderFailPageContent />
+    </Suspense>
   )
 }

@@ -20,6 +20,7 @@ export {
   reviewApi,
   setAccessToken,
   getAccessToken,
+  getUserIdFromToken,
 } from './client'
 export type { ApiResponse, ApiError } from './client'
 

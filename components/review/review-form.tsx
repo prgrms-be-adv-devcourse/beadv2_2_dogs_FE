@@ -7,10 +7,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Star } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { reviewService } from '@/lib/api/services/review'
+import { uploadService } from '@/lib/api/services/upload'
 
 interface ReviewFormProps {
-  productId?: number
-  experienceId?: number
+  productId?: string | number
+  experienceId?: string | number
+  orderItemId?: string // 주문 항목 ID (리뷰 작성에 필요)
   onSubmit?: (review: { rating: number; content: string; images?: File[] }) => void
   onCancel?: () => void
 }
@@ -47,8 +50,27 @@ export function ReviewForm({ productId, experienceId, onSubmit, onCancel }: Revi
     setIsSubmitting(true)
 
     try {
-      // TODO: API 호출
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // 이미지 업로드 (있는 경우)
+      let imageUrls: string[] = []
+      if (images.length > 0) {
+        const uploadPromises = images.map((image) => uploadService.uploadFile(image, 'review'))
+        const uploadResults = await Promise.all(uploadPromises)
+        imageUrls = uploadResults.map((result) => result.url)
+      }
+
+      // 상품 리뷰 등록
+      if (productId && orderItemId) {
+        await reviewService.createProductReview(String(productId), {
+          orderItemId,
+          rating,
+          content: content.trim(),
+          imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+          reviewVisibility: 'PUBLIC', // 기본값: 공개
+        })
+      } else {
+        // TODO: 체험 리뷰 등록 (experienceId가 있는 경우)
+        throw new Error('체험 리뷰는 아직 지원되지 않습니다.')
+      }
 
       onSubmit?.({
         rating,
@@ -66,10 +88,11 @@ export function ReviewForm({ productId, experienceId, onSubmit, onCancel }: Revi
       setContent('')
       setImages([])
       onCancel?.()
-    } catch (error) {
+    } catch (error: any) {
+      console.error('리뷰 등록 실패:', error)
       toast({
         title: '리뷰 등록 실패',
-        description: '리뷰 등록 중 오류가 발생했습니다. 다시 시도해주세요.',
+        description: error.message || '리뷰 등록 중 오류가 발생했습니다. 다시 시도해주세요.',
         variant: 'destructive',
       })
     } finally {

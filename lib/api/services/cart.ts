@@ -1,34 +1,45 @@
 import { cartApi } from '../client'
-import type { Cart, CartItem, AddToCartRequest } from '../types'
+import type {
+  CartInfo,
+  CartItemInfo,
+  AddItemRequest,
+  UpdateQuantityRequest,
+  UpdateOptionRequest,
+} from '../types'
 
 export const cartService = {
-  // 장바구니 조회 (Buyer Service - Product와 동일한 패턴 적용)
-  async getCart(): Promise<Cart> {
-    return cartApi.get<Cart>('/api/cart')
+  // 장바구니 조회
+  async getCart(): Promise<CartInfo> {
+    return cartApi.get<CartInfo>('/carts')
   },
 
   // 장바구니에 상품 추가
-  async addToCart(data: AddToCartRequest): Promise<CartItem> {
-    return cartApi.post<CartItem>('/api/cart/items', data)
+  async addToCart(data: AddItemRequest): Promise<CartItemInfo> {
+    return cartApi.post<CartItemInfo>('/carts/items', data)
   },
 
-  // 장바구니 상품 수량 변경
-  async updateCartItem(itemId: number, quantity: number): Promise<CartItem> {
-    return cartApi.patch<CartItem>(`/api/cart/items/${itemId}`, { quantity })
+  // 장바구니 항목 수량 변경
+  async updateCartItem(itemId: string, data: UpdateQuantityRequest): Promise<CartItemInfo> {
+    return cartApi.patch<CartItemInfo>(`/carts/items/${itemId}/quantity`, data)
   },
 
-  // 장바구니 상품 삭제
-  async removeCartItem(itemId: number): Promise<void> {
-    return cartApi.delete(`/api/cart/items/${itemId}`)
+  // 장바구니 항목 옵션 변경
+  async updateCartItemOption(itemId: string, data: UpdateOptionRequest): Promise<CartItemInfo> {
+    return cartApi.patch<CartItemInfo>(`/carts/items/${itemId}/option`, data)
+  },
+
+  // 장바구니 항목 삭제
+  async removeCartItem(itemId: string): Promise<void> {
+    return cartApi.delete(`/carts/items/${itemId}`)
   },
 
   // 장바구니 비우기
   async clearCart(): Promise<void> {
-    return cartApi.delete('/api/cart')
+    return cartApi.delete('/carts')
   },
 
-  // 선택한 상품들 삭제
-  async removeSelectedItems(itemIds: number[]): Promise<void> {
-    return cartApi.post('/api/cart/items/delete', { itemIds })
+  // 비로그인 장바구니 병합
+  async mergeCart(cartItems: CartItemInfo[]): Promise<CartInfo> {
+    return cartApi.post<CartInfo>('/carts/merge', { cartItems })
   },
 }

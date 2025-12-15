@@ -53,6 +53,7 @@ import { useCartStore } from '@/lib/cart-store'
 import { useAddressStore } from '@/lib/address-store'
 import { AddressDialog } from '@/components/address/address-dialog'
 import { sellerService } from '@/lib/api/services/seller'
+import { depositService } from '@/lib/api/services/payment'
 import { useEffect } from 'react'
 
 export default function ProfilePage() {
@@ -213,15 +214,17 @@ export default function ProfilePage() {
     const fetchDepositBalance = async () => {
       setIsLoadingDeposit(true)
       try {
-        // TODO: API 연동 - 예치금 조회 API 호출
-        // const response = await userService.getDepositBalance()
-        // setDepositBalance(response.balance)
-
-        // 임시 데이터 (API 연동 전까지)
-        setDepositBalance(50000)
-      } catch (error) {
+        const response = await depositService.getDeposit()
+        setDepositBalance(response.balance)
+      } catch (error: any) {
         console.error('예치금 조회 실패:', error)
-        setDepositBalance(0)
+        // 404 에러인 경우 예치금 계정이 없는 것으로 처리 (정상)
+        if (error?.status === 404) {
+          setDepositBalance(0)
+        } else {
+          // 다른 에러인 경우도 0으로 설정
+          setDepositBalance(0)
+        }
       } finally {
         setIsLoadingDeposit(false)
       }
