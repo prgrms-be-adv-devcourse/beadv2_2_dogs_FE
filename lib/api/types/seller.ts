@@ -61,3 +61,14 @@ export interface SettlementMonth {
   monthValue: number // 월 숫자 (1-12)
   leapYear: boolean // 윤년 여부
 }
+
+// 판매자 정보 조회 응답 데이터
+export interface SellerInfoData {
+  storeName: string // 상점 이름
+  businessRegNo: string // 사업자 등록 번호
+  businessOwnerName: string // 사업자 대표자명
+  status: SellerStatus // 판매자 상태
+}
+
+// 판매자 상태
+export type SellerStatus = 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED'

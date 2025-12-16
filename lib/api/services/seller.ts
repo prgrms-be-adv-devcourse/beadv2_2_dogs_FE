@@ -1,9 +1,10 @@
 import { sellerApi, settlementApi } from '../client'
-import type {
+import {
   SellerApplyRequestDto,
   MySettlementResponse,
   PaginatedResponse,
   PaginationParams,
+  SellerInfoData,
 } from '../types'
 
 export const sellerService = {
@@ -15,6 +16,14 @@ export const sellerService = {
   // 내 정산 정보 조회
   async getMySettlements(): Promise<MySettlementResponse> {
     const response = await sellerApi.get<{ data: MySettlementResponse }>('/api/v1/settlements/me')
+    return response.data
+  },
+
+  // 판매자 정보 조회
+  async getSellerInfo(userId: string): Promise<SellerInfoData> {
+    const response = await sellerApi.get<{ status: number; data: SellerInfoData; message: string }>(
+      `/api/v1/sellers/sellerInfo/${userId}`
+    )
     return response.data
   },
 
