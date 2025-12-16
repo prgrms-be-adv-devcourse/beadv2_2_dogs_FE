@@ -1,4 +1,12 @@
-// Seller Types
+// 판매자 전환 시 요청
+export interface SellerApplyRequestDto {
+  storeName: string
+  business_reg_no: string
+  business_owner_name: string
+  settlement_bank: string
+  settlement_account: string
+}
+
 export interface SellerDashboard {
   totalSales: number
   totalOrders: number
