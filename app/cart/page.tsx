@@ -1,7 +1,6 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { ShoppingCart, ArrowRight, Truck, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useCartStore } from '@/lib/cart-store'
@@ -51,7 +50,8 @@ export default function CartPage() {
         })
         toast({
           title: '장바구니 로드 실패',
-          description: error instanceof Error ? error.message : '장바구니 데이터를 불러오는데 실패했습니다.',
+          description:
+            error instanceof Error ? error.message : '장바구니 데이터를 불러오는데 실패했습니다.',
           variant: 'destructive',
         })
       } finally {
@@ -175,7 +175,7 @@ export default function CartPage() {
             <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-4" />
             <p className="text-gray-500">장바구니를 불러오는 중...</p>
           </div>
-        ) : (!cartData || cartItems.length === 0) ? (
+        ) : !cartData || cartItems.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
             <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-gray-400" />
             <h2 className="text-xl font-semibold mb-2 text-gray-900">장바구니가 비어있습니다</h2>
@@ -227,7 +227,9 @@ export default function CartPage() {
 
                 <div className="flex justify-between items-center py-3 mb-4 border-t border-gray-200">
                   <span className="text-base font-bold text-gray-900">총 결제 금액</span>
-                  <span className="text-lg font-bold text-green-600">{finalPrice.toLocaleString()}원</span>
+                  <span className="text-lg font-bold text-green-600">
+                    {finalPrice.toLocaleString()}원
+                  </span>
                 </div>
 
                 <Button

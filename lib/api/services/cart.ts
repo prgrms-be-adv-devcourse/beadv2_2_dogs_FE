@@ -1,5 +1,11 @@
 import { cartApi } from '@/lib/api'
-import type { CartInfo, CartItemInfo, AddItemRequest, UpdateQuantityRequest, UpdateOptionRequest } from '../types'
+import type {
+  CartInfo,
+  CartItemInfo,
+  AddItemRequest,
+  UpdateQuantityRequest,
+  UpdateOptionRequest,
+} from '../types'
 
 export const cartService = {
   // 장바구니 조회
@@ -10,7 +16,7 @@ export const cartService = {
   },
 
   // 장바구니에 상품 추가
-  async addItemToCart(productId: string, request: AddItemRequest): Promise<CartItemInfo> {
+  async addItemToCart(request: AddItemRequest): Promise<CartItemInfo> {
     const response = await cartApi.post<{ data: CartItemInfo }>('/api/v1/carts/items', request)
     return response.data
   },

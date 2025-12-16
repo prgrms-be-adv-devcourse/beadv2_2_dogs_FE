@@ -148,23 +148,21 @@ export function Header({ showCart = false }: HeaderProps) {
         <div className="flex items-center gap-2">
           {/* TODO: 알림 기능 추가 예정 */}
           {/* <NotificationIcon /> */}
-          {showCart && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative hover:bg-[#F0FDF4] dark:hover:bg-green-950/30 rounded-lg transition-colors"
-              asChild
-            >
-              <Link href="/cart">
-                <ShoppingCart className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                {cartItemsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-[#22C55E] text-white text-xs flex items-center justify-center font-semibold shadow-sm">
-                    {cartItemsCount}
-                  </span>
-                )}
-              </Link>
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative hover:bg-[#F0FDF4] dark:hover:bg-green-950/30 rounded-lg transition-colors"
+            asChild
+          >
+            <Link href="/cart">
+              <ShoppingCart className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-[#22C55E] text-white text-xs flex items-center justify-center font-semibold shadow-sm">
+                  {cartItemsCount}
+                </span>
+              )}
+            </Link>
+          </Button>
           {!isLoggedIn ? (
             <>
               <Button

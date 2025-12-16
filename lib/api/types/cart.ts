@@ -31,6 +31,8 @@ export interface CartResponse {
 export interface AddItemRequest {
   productId: string | number // UUID or legacy number
   quantity: number
+  unitPrice: number
+  optionInfoJson?: string
 }
 
 export interface UpdateQuantityRequest {

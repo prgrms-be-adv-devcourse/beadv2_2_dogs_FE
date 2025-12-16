@@ -169,7 +169,7 @@ export default function ProductDetailPage() {
 
     try {
       // 서버 API로 장바구니에 상품 추가
-      await cartService.addItemToCart(displayProduct.id, {
+      await cartService.addItemToCart({
         productId: displayProduct.id,
         quantity,
         unitPrice: displayProduct.price,
