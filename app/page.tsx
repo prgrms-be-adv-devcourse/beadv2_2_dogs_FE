@@ -1,9 +1,6 @@
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Sprout, Leaf, Heart, TrendingDown, MapPin, Star } from 'lucide-react'
+import { Sprout, Leaf, Heart, TrendingDown } from 'lucide-react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Header } from '@/components/layout/header'
 import { ScrollCTA } from '@/components/scroll-cta'
 import { HeroSlider } from '@/components/landing/hero-slider'
@@ -103,50 +100,10 @@ export default function HomePage() {
       {/* Hero Section - Greenlabs Style */}
       <HeroSlider />
 
-      {/* Stats - Clean Minimal Style */}
-      <section className="py-20 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
-        <div className="container mx-auto px-6 md:px-8 max-w-7xl">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 md:gap-16 max-w-5xl mx-auto">
-            <div className="text-center">
-              <div className="text-5xl md:text-6xl font-bold text-[#22C55E] dark:text-[#4ADE80] mb-3 tracking-tight">
-                320+
-              </div>
-              <div className="text-sm md:text-base text-gray-700 dark:text-gray-300 font-medium">
-                등록 농가
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-5xl md:text-6xl font-bold text-[#22C55E] dark:text-[#4ADE80] mb-3 tracking-tight">
-                1,200+
-              </div>
-              <div className="text-sm md:text-base text-gray-700 dark:text-gray-300 font-medium">
-                신선 농산물
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-5xl md:text-6xl font-bold text-[#22C55E] dark:text-[#4ADE80] mb-3 tracking-tight">
-                85%
-              </div>
-              <div className="text-sm md:text-base text-gray-700 dark:text-gray-300 font-medium">
-                탄소 절감
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-5xl md:text-6xl font-bold text-[#22C55E] dark:text-[#4ADE80] mb-3 tracking-tight">
-                50k+
-              </div>
-              <div className="text-sm md:text-base text-gray-700 dark:text-gray-300 font-medium">
-                만족한 고객
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Features - Greenlabs Style */}
-      <section className="py-32 md:py-40 bg-white dark:bg-gray-900">
+      <section className="pt-20 pb-12 md:pt-28 md:pb-16 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-6 md:px-8 max-w-7xl">
-          <div className="text-center mb-20">
+          <div className="text-center mb-12 md:mb-16">
             <h2 className="text-4xl md:text-6xl font-semibold mb-6 text-gray-900 dark:text-white tracking-tight">
               왜 바로팜일까요?
             </h2>
@@ -155,12 +112,12 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-16 md:gap-20 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-12 md:gap-16 max-w-6xl mx-auto">
             <div className="text-center">
-              <div className="w-24 h-24 flex items-center justify-center mx-auto mb-8 bg-[#F0FDF4] dark:bg-green-950/30 rounded-2xl border border-[#D1FAE5] dark:border-green-900/50">
-                <Leaf className="h-14 w-14 text-[#22C55E] dark:text-[#4ADE80]" />
+              <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6 bg-[#F0FDF4] dark:bg-green-950/30 rounded-2xl border border-[#D1FAE5] dark:border-green-900/50">
+                <Leaf className="h-12 w-12 text-[#22C55E] dark:text-[#4ADE80]" />
               </div>
-              <h3 className="text-2xl md:text-3xl font-semibold mb-4 text-gray-900 dark:text-white">
+              <h3 className="text-2xl md:text-3xl font-semibold mb-3 text-gray-900 dark:text-white">
                 환경 보호
               </h3>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-normal">
@@ -169,10 +126,10 @@ export default function HomePage() {
             </div>
 
             <div className="text-center">
-              <div className="w-24 h-24 flex items-center justify-center mx-auto mb-8 bg-[#F0FDF4] dark:bg-green-950/30 rounded-2xl border border-[#D1FAE5] dark:border-green-900/50">
-                <TrendingDown className="h-14 w-14 text-[#22C55E] dark:text-[#4ADE80]" />
+              <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6 bg-[#F0FDF4] dark:bg-green-950/30 rounded-2xl border border-[#D1FAE5] dark:border-green-900/50">
+                <TrendingDown className="h-12 w-12 text-[#22C55E] dark:text-[#4ADE80]" />
               </div>
-              <h3 className="text-2xl md:text-3xl font-semibold mb-4 text-gray-900 dark:text-white">
+              <h3 className="text-2xl md:text-3xl font-semibold mb-3 text-gray-900 dark:text-white">
                 합리적 가격
               </h3>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-normal">
@@ -181,15 +138,55 @@ export default function HomePage() {
             </div>
 
             <div className="text-center">
-              <div className="w-24 h-24 flex items-center justify-center mx-auto mb-8 bg-[#F0FDF4] dark:bg-green-950/30 rounded-2xl border border-[#D1FAE5] dark:border-green-900/50">
-                <Heart className="h-14 w-14 text-[#22C55E] dark:text-[#4ADE80]" />
+              <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6 bg-[#F0FDF4] dark:bg-green-950/30 rounded-2xl border border-[#D1FAE5] dark:border-green-900/50">
+                <Heart className="h-12 w-12 text-[#22C55E] dark:text-[#4ADE80]" />
               </div>
-              <h3 className="text-2xl md:text-3xl font-semibold mb-4 text-gray-900 dark:text-white">
+              <h3 className="text-2xl md:text-3xl font-semibold mb-3 text-gray-900 dark:text-white">
                 농가 활성화
               </h3>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-normal">
                 농장 체험 프로그램으로 농가에 새로운 수익원을 제공합니다
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats - Clean Minimal Style */}
+      <section className="pt-10 pb-16 md:pt-12 md:pb-20 bg-gray-50 dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
+        <div className="container mx-auto px-6 md:px-8 max-w-7xl">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-12 max-w-5xl mx-auto">
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-bold text-[#22C55E] dark:text-[#4ADE80] mb-2 tracking-tight">
+                320+
+              </div>
+              <div className="text-sm md:text-base text-gray-700 dark:text-gray-300 font-medium">
+                등록 농가
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-bold text-[#22C55E] dark:text-[#4ADE80] mb-2 tracking-tight">
+                1,200+
+              </div>
+              <div className="text-sm md:text-base text-gray-700 dark:text-gray-300 font-medium">
+                신선 농산물
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-bold text-[#22C55E] dark:text-[#4ADE80] mb-2 tracking-tight">
+                85%
+              </div>
+              <div className="text-sm md:text-base text-gray-700 dark:text-gray-300 font-medium">
+                탄소 절감
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-bold text-[#22C55E] dark:text-[#4ADE80] mb-2 tracking-tight">
+                50k+
+              </div>
+              <div className="text-sm md:text-base text-gray-700 dark:text-gray-300 font-medium">
+                만족한 고객
+              </div>
             </div>
           </div>
         </div>
