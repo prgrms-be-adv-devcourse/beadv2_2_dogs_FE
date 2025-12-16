@@ -39,7 +39,7 @@ export default function CartPage() {
 
         // 헤더 카운트를 위해 로컬 스토어 동기화
         if (serverCart?.items) {
-          syncLocalCart(serverCart.items)
+          await syncLocalCart(serverCart.items)
         }
       } catch (error) {
         console.error('장바구니 데이터 로드 실패:', error)
@@ -78,7 +78,7 @@ export default function CartPage() {
 
       // 로컬 스토어도 동기화
       if (updatedCart?.items) {
-        syncLocalCart(updatedCart.items)
+        await syncLocalCart(updatedCart.items)
       }
 
       toast({
@@ -98,20 +98,40 @@ export default function CartPage() {
   }
 
   // 수량 변경 시 로컬 스토어 동기화 헬퍼 함수
-  const syncLocalCart = (items: CartItemInfo[]) => {
+  const syncLocalCart = async (items: CartItemInfo[]) => {
     clearCart()
-    items.forEach((item: CartItemInfo, index: number) => {
+    for (let index = 0; index < items.length; index++) {
+      const item = items[index]
+      
+      // 상품 정보 가져오기 (sellerId, farm 등)
+      let productName = item.productName || '상품명'
+      let productImage = item.productImage || '/placeholder.svg'
+      let sellerId = ''
+      let farm = '농장'
+      
+      try {
+        const { productService } = await import('@/lib/api/services/product')
+        const product = await productService.getProduct(item.productId)
+        productName = product.productName || productName
+        productImage = product.imageUrls?.[0] || productImage
+        sellerId = product.sellerId || ''
+        farm = product.farmName || product.farm?.name || '농장'
+      } catch (error) {
+        console.warn(`상품 ${item.productId} 정보 조회 실패, 기본값 사용:`, error)
+      }
+      
       addItem({
         id: index + 1, // 고유한 숫자 ID 부여 (1부터 시작)
         productId: item.productId,
-        sellerId: item.productId,
-        name: item.productName || '상품명',
+        sellerId: sellerId,
+        name: productName,
         price: item.unitPrice,
-        image: item.productImage || '/placeholder.svg',
-        farm: '농장',
+        image: productImage,
+        farm: farm,
         quantity: item.quantity,
+        options: item.optionInfoJson || undefined,
       })
-    })
+    }
   }
 
   // 상품 삭제 핸들러
@@ -124,7 +144,7 @@ export default function CartPage() {
 
       // 로컬 스토어도 동기화
       if (updatedCart?.items) {
-        syncLocalCart(updatedCart.items)
+        await syncLocalCart(updatedCart.items)
       }
 
       toast({

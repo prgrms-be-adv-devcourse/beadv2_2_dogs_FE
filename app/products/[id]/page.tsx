@@ -35,6 +35,17 @@ export default function ProductDetailPage() {
     setMounted(true)
   }, [])
 
+  // 디버깅: 상품 데이터 상태 로깅
+  useEffect(() => {
+    console.log('[ProductDetail] State update:', {
+      productId,
+      hasProduct: !!product,
+      hasDisplayProduct: !!product, // product가 있으면 displayProduct도 있음
+      product,
+      isLoading,
+    })
+  }, [product, isLoading, productId])
+
   // 상품 데이터 로드
   useEffect(() => {
     const fetchProduct = async () => {
@@ -210,48 +221,78 @@ export default function ProductDetailPage() {
   }
 
   const handleBuyNow = async () => {
-    if (!displayProduct) return
-
     console.log('[ProductDetail] handleBuyNow called:', {
-      productId: displayProduct.id,
+      productId,
       quantity,
+      hasDisplayProduct: !!displayProduct,
+      hasProduct: !!product,
+      displayProduct,
+      product,
     })
 
-    // 바로 구매: 선택한 수량만 장바구니에 추가 (기존 아이템은 유지)
-    addItem({
-      id: Number(displayProduct.id) || 0, // TODO: UUID를 number로 변환하는 로직 개선 필요
+    if (!displayProduct) {
+      console.error('[ProductDetail] No product data available for buy now')
+      toast({
+        title: '상품 정보를 불러올 수 없습니다',
+        description: '잠시 후 다시 시도해주세요.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const buyNowData = {
       productId: String(displayProduct.id),
       sellerId: String(displayProduct.farmId),
       name: displayProduct.name,
-      price: displayProduct.price,
-      image: displayProduct.images[0] || '/placeholder.svg',
+      price: Number(displayProduct.price),
+      image: displayProduct.images?.[0] ?? '/placeholder.svg',
       farm: displayProduct.farm,
       quantity,
-      isBuyNow: true, // 바로 구매 플래그
-    })
+      timestamp: Date.now(),
+    }
 
-    console.log('[ProductDetail] addItem called, waiting for localStorage save...')
+    console.log('[ProductDetail] Generated buy now data:', buyNowData)
 
-    toast({
-      title: '주문 페이지로 이동합니다',
-      description: `${displayProduct.name} ${quantity}개를 주문합니다.`,
-    })
+    if (typeof window === 'undefined') {
+      console.error('[ProductDetail] window is undefined, cannot save to sessionStorage')
+      return
+    }
 
-    // persist 미들웨어가 localStorage에 저장할 시간을 확보
-    // 여러 프레임을 기다려서 상태 업데이트와 localStorage 저장이 완료되도록 함
-    await new Promise((resolve) => {
-      // URL 파라미터로 바로 구매 모드임을 표시
-      const buyNowParam = '?buyNow=true'
+    try {
+      // sessionStorage에 저장
+      sessionStorage.setItem('barofarm-buynow-item', JSON.stringify(buyNowData))
+      console.log('[ProductDetail] Saved buy now data to sessionStorage')
 
-      // 즉시 이동 (결제 페이지에서 localStorage를 확인하도록)
-      console.log('[ProductDetail] Navigating to checkout with buyNow flag...')
-      router.push(`/checkout${buyNowParam}`)
+      // 저장 확인
+      const saved = sessionStorage.getItem('barofarm-buynow-item')
+      if (!saved) {
+        console.error('[ProductDetail] Failed to save to sessionStorage')
+        toast({
+          title: '저장 실패',
+          description: '주문 정보를 저장하는데 실패했습니다.',
+          variant: 'destructive',
+        })
+        return
+      }
 
-      // 약간의 지연 후 resolve (이동이 완료되도록)
-      setTimeout(() => {
-        resolve(undefined)
-      }, 100)
-    })
+      console.log('[ProductDetail] Verification - saved data:', saved)
+
+      toast({
+        title: '주문 페이지로 이동합니다',
+        description: `${buyNowData.name} ${quantity}개를 주문합니다.`,
+      })
+
+      // 저장 확인 후 페이지 이동
+      console.log('[ProductDetail] Navigating to checkout with buy now data...')
+      router.push('/checkout?buyNow=true')
+    } catch (error) {
+      console.error('[ProductDetail] Error saving to sessionStorage:', error)
+      toast({
+        title: '저장 실패',
+        description: '주문 정보를 저장하는데 실패했습니다.',
+        variant: 'destructive',
+      })
+    }
   }
 
   if (isLoading) {
@@ -444,7 +485,13 @@ export default function ProductDetailPage() {
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   장바구니
                 </Button>
-                <Button className="flex-1" onClick={handleBuyNow}>
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    console.log('[Button] Buy now button clicked')
+                    handleBuyNow()
+                  }}
+                >
                   바로 구매
                 </Button>
               </div>
