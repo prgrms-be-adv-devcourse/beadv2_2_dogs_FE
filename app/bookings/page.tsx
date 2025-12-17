@@ -7,13 +7,25 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { reservationService } from '@/lib/api/services/experience'
-import type { ExperienceBooking } from '@/lib/api/types'
 import { getUserId } from '@/lib/api/client'
 import { Calendar, Clock, Users } from 'lucide-react'
 
+type ReservationItem = {
+  id: string
+  buyerId?: string
+  experienceTitle?: string
+  date?: string
+  reservedDate?: string
+  reservedTimeSlot?: string
+  headCount?: number
+  participants?: number
+  totalPrice?: number
+  status?: string
+}
+
 export default function BookingsPage() {
   const { toast } = useToast()
-  const [bookings, setBookings] = useState<ExperienceBooking[]>([])
+  const [bookings, setBookings] = useState<ReservationItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const [buyerId, setBuyerId] = useState<string | null>(null)
@@ -37,11 +49,10 @@ export default function BookingsPage() {
         const response = await reservationService.getReservations({
           page: 0,
           size: 50,
-          // buyerId 필터가 없을 수 있으므로, 일단 전체 조회 후 클라이언트에서 필터
-        } as any)
+          buyerId: uid,
+        } as { page: number; size: number; buyerId: string })
         const list = Array.isArray(response?.content) ? response.content : []
-        const filtered = list.filter((item) => !item.buyerId || item.buyerId === uid)
-        setBookings(filtered)
+        setBookings(list as ReservationItem[])
       } catch (error) {
         console.error('예약 내역 조회 실패:', error)
         toast({
