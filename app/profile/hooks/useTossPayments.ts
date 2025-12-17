@@ -15,10 +15,38 @@ export function useTossPayments(user: ProfileUser) {
     if (typeof window === 'undefined') return
 
     const loadTossWidget = () => {
+      const maskKey = (key: string) => {
+        const trimmed = key.trim()
+        if (trimmed.length <= 8) return `${trimmed}`
+        return `${trimmed.slice(0, 4)}...${trimmed.slice(-4)}`
+      }
+
+      const getTossClientKey = () => {
+        const envKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim()
+        if (envKey) {
+          console.log(
+            '[Toss] client key source: process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY',
+            maskKey(envKey)
+          )
+          return envKey
+        }
+        const runtimeKey =
+          (window as { __ENV__?: Record<string, string>; NEXT_PUBLIC_TOSS_CLIENT_KEY?: string })
+            ?.__ENV__?.NEXT_PUBLIC_TOSS_CLIENT_KEY ||
+          (window as { NEXT_PUBLIC_TOSS_CLIENT_KEY?: string }).NEXT_PUBLIC_TOSS_CLIENT_KEY
+        if (runtimeKey?.trim()) {
+          console.log(
+            '[Toss] client key source: window runtime (NEXT_PUBLIC_TOSS_CLIENT_KEY)',
+            maskKey(runtimeKey)
+          )
+          return runtimeKey.trim()
+        }
+        return ''
+      }
+
       try {
         if (window.TossPayments) {
-          const clientKey =
-            process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_eqRGgYO1r56Qy7PaPw7p8QnN2Eya'
+          const clientKey = getTossClientKey()
           if (!clientKey) {
             console.error('토스페이먼츠 클라이언트 키가 설정되지 않았습니다.')
             return
@@ -39,8 +67,7 @@ export function useTossPayments(user: ProfileUser) {
           script.onload = () => {
             setTimeout(() => {
               try {
-                const clientKey =
-                  process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq'
+                const clientKey = getTossClientKey()
                 if (!clientKey) {
                   console.error('토스페이먼츠 클라이언트 키가 설정되지 않았습니다.')
                   return
