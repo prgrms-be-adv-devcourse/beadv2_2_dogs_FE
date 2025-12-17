@@ -17,8 +17,7 @@ export function useTossPayments(user: ProfileUser) {
     const loadTossWidget = () => {
       try {
         if (window.TossPayments) {
-          const clientKey =
-            process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq'
+          const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
           if (!clientKey) {
             console.error('토스페이먼츠 클라이언트 키가 설정되지 않았습니다.')
             return
@@ -39,8 +38,7 @@ export function useTossPayments(user: ProfileUser) {
           script.onload = () => {
             setTimeout(() => {
               try {
-                const clientKey =
-                  process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq'
+                const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
                 if (!clientKey) {
                   console.error('토스페이먼츠 클라이언트 키가 설정되지 않았습니다.')
                   return
