@@ -22,7 +22,7 @@ export function useTossPayments(user: ProfileUser) {
           (window as { __ENV__?: Record<string, string>; NEXT_PUBLIC_TOSS_CLIENT_KEY?: string })
             ?.__ENV__?.NEXT_PUBLIC_TOSS_CLIENT_KEY ||
           (window as { NEXT_PUBLIC_TOSS_CLIENT_KEY?: string }).NEXT_PUBLIC_TOSS_CLIENT_KEY
-        return runtimeKey?.trim() || ''
+        return runtimeKey?.trim() || 'test_ck_ma60RZblrqReBBKpoZ7E8wzYWBn1'
       }
 
       try {
