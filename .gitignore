@@ -2,6 +2,7 @@
 node_modules/
 .pnp
 .pnp.js
+.pnpm-store/
 
 # Lock files (keep pnpm-lock.yaml, ignore others)
 package-lock.json

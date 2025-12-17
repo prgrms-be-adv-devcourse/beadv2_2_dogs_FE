@@ -1,39 +1,43 @@
 import { orderApi } from '../client'
-import type { Order, CreateOrderRequest, PaginatedResponse, PaginationParams } from '../types'
+import type {
+  OrderDetailInfo,
+  OrderCreateRequest,
+  OrderCancelInfo,
+  PaginatedResponse,
+  PaginationParams,
+} from '../types'
 
 export const orderService = {
   // 주문 목록 조회
-  async getOrders(params?: PaginationParams): Promise<PaginatedResponse<Order>> {
-    return orderApi.get<PaginatedResponse<Order>>('/api/orders', { params })
+  async getOrders(params?: PaginationParams): Promise<PaginatedResponse<OrderDetailInfo>> {
+    const response = await orderApi.get<{ data: PaginatedResponse<OrderDetailInfo> }>(
+      '/api/v1/orders',
+      {
+        params: params as Record<string, string | number | boolean | undefined>,
+      }
+    )
+    // API 응답이 { status, data: { content, ... }, message } 형태이므로 data 필드 추출
+    return response.data
   },
 
   // 주문 상세 조회
-  async getOrder(id: number): Promise<Order> {
-    return orderApi.get<Order>(`/api/orders/${id}`)
-  },
-
-  // 주문 번호로 조회
-  async getOrderByNumber(orderNumber: string): Promise<Order> {
-    return orderApi.get<Order>(`/api/orders/number/${orderNumber}`)
+  async getOrder(orderId: string): Promise<OrderDetailInfo> {
+    const response = await orderApi.get<{ data: OrderDetailInfo }>(`/api/v1/orders/${orderId}`)
+    return response.data
   },
 
   // 주문 생성
-  async createOrder(data: CreateOrderRequest): Promise<Order> {
-    return orderApi.post<Order>('/api/orders', data)
+  async createOrder(data: OrderCreateRequest): Promise<OrderDetailInfo> {
+    const response = await orderApi.post<{ data: OrderDetailInfo }>('/api/v1/orders', data)
+    return response.data
   },
 
   // 주문 취소
-  async cancelOrder(id: number, reason?: string): Promise<Order> {
-    return orderApi.post<Order>(`/api/orders/${id}/cancel`, { reason })
-  },
-
-  // 환불 요청
-  async requestRefund(id: number, reason: string): Promise<Order> {
-    return orderApi.post<Order>(`/api/orders/${id}/refund`, { reason })
-  },
-
-  // 구매 확정
-  async confirmOrder(id: number): Promise<Order> {
-    return orderApi.post<Order>(`/api/orders/${id}/confirm`)
+  async cancelOrder(orderId: string, data?: OrderCancelInfo): Promise<OrderCancelInfo> {
+    const response = await orderApi.post<{ data: OrderCancelInfo }>(
+      `/api/v1/orders/${orderId}/cancel`,
+      data || {}
+    )
+    return response.data
   },
 }

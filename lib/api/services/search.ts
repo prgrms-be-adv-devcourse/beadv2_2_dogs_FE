@@ -1,36 +1,52 @@
 import { searchApi } from '../client'
-import type { SearchResult, SearchParams, Product, Experience, Farm } from '../types'
+import type {
+  UnifiedSearchResponse,
+  UnifiedAutoCompleteResponse,
+  ProductAutoItem,
+  FarmAutoItem,
+  ExperienceAutoItem,
+  SearchParams,
+} from '../types'
 
 export const searchService = {
   // 통합 검색
-  async search(params: SearchParams): Promise<SearchResult> {
-    return searchApi.get<SearchResult>('/api/search', { params })
+  async search(params: SearchParams): Promise<UnifiedSearchResponse> {
+    // API 요구사항에 맞춰 keyword를 q로 매핑 및 엔드포인트 변경
+    const queryParams: Record<string, any> = {
+      q: params.keyword,
+      type: params.type,
+      page: params.page,
+      size: params.size,
+    }
+    const response = await searchApi.get<{
+      status: number
+      data: UnifiedSearchResponse
+      message: string | null
+    }>('/api/v1/search', { params: queryParams })
+    return response.data
   },
 
-  // 상품 검색
-  async searchProducts(keyword: string, page?: number, size?: number): Promise<Product[]> {
-    return searchApi.get<Product[]>('/api/search/products', { params: { keyword, page, size } })
-  },
-
-  // 체험 검색
-  async searchExperiences(keyword: string, page?: number, size?: number): Promise<Experience[]> {
-    return searchApi.get<Experience[]>('/api/search/experiences', {
-      params: { keyword, page, size },
+  // 통합 자동완성
+  async getAutocomplete(keyword: string): Promise<UnifiedAutoCompleteResponse> {
+    return searchApi.get<UnifiedAutoCompleteResponse>('/search/autocomplete', {
+      params: { keyword },
     })
   },
 
-  // 농장 검색
-  async searchFarms(keyword: string, page?: number, size?: number): Promise<Farm[]> {
-    return searchApi.get<Farm[]>('/api/search/farms', { params: { keyword, page, size } })
+  // 상품 자동완성
+  async getProductAutocomplete(keyword: string): Promise<ProductAutoItem[]> {
+    return searchApi.get<ProductAutoItem[]>('/search/product/autocomplete', { params: { keyword } })
   },
 
-  // 인기 검색어 조회
-  async getPopularKeywords(): Promise<string[]> {
-    return searchApi.get<string[]>('/api/search/popular-keywords')
+  // 농장 자동완성
+  async getFarmAutocomplete(keyword: string): Promise<FarmAutoItem[]> {
+    return searchApi.get<FarmAutoItem[]>('/search/farm/autocomplete', { params: { keyword } })
   },
 
-  // 자동완성
-  async getSuggestions(keyword: string): Promise<string[]> {
-    return searchApi.get<string[]>('/api/search/suggestions', { params: { keyword } })
+  // 체험 자동완성
+  async getExperienceAutocomplete(keyword: string): Promise<ExperienceAutoItem[]> {
+    return searchApi.get<ExperienceAutoItem[]>('/search/experience/autocomplete', {
+      params: { keyword },
+    })
   },
 }

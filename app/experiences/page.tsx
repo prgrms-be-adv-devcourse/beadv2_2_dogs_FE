@@ -1,13 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { MapPin, Search, Filter, Users, Clock, X } from 'lucide-react'
-import Link from 'next/link'
-import Image from 'next/image'
+import { Search, Filter, X } from 'lucide-react'
 import { Header } from '@/components/layout/header'
 import {
   Select,
@@ -16,102 +12,146 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
+import { experienceService } from '@/lib/api/services/experience'
+import { farmService } from '@/lib/api/services/farm'
+import type { Experience } from '@/lib/api/types'
+import { ExperienceCard, type ExperienceCardData } from '@/components/experience/experience-card'
 
 export default function ExperiencesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [category, setCategory] = useState('all')
   const [sortBy, setSortBy] = useState('popular')
+  const [experiences, setExperiences] = useState<ExperienceCardData[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [paginationInfo, setPaginationInfo] = useState<{
+    totalPages: number
+    totalElements: number
+    hasNext: boolean
+    hasPrevious: boolean
+    page: number
+    size: number
+  } | null>(null)
 
-  const experiences = [
-    {
-      id: 1,
-      title: '딸기 수확 체험',
-      farm: '달콤농원',
-      location: '전북 완주',
-      price: 25000,
-      image: '/strawberry-picking-farm-experience.jpg',
-      duration: '2시간',
-      capacity: '최대 10명',
-      rating: 4.9,
-      reviews: 87,
-      category: '수확',
-      tag: '인기',
-    },
-    {
-      id: 2,
-      title: '감자 캐기 체험',
-      farm: '푸른밭농장',
-      location: '강원 평창',
-      price: 20000,
-      image: '/potato-harvesting-farm-experience.jpg',
-      duration: '3시간',
-      capacity: '최대 15명',
-      rating: 4.8,
-      reviews: 64,
-      category: '수확',
-      tag: '베스트',
-    },
-    {
-      id: 3,
-      title: '토마토 수확 & 요리',
-      farm: '햇살농장',
-      location: '충남 당진',
-      price: 35000,
-      image: '/tomato-harvesting-cooking-farm-experience.jpg',
-      duration: '4시간',
-      capacity: '최대 8명',
-      rating: 5.0,
-      reviews: 92,
-      category: '요리',
-      tag: '인기',
-    },
-    {
-      id: 4,
-      title: '사과 따기 체험',
-      farm: '사과마을',
-      location: '경북 청송',
-      price: 28000,
-      image: '/apple-picking-experience.jpg',
-      duration: '2.5시간',
-      capacity: '최대 12명',
-      rating: 4.7,
-      reviews: 53,
-      category: '수확',
-      tag: '신규',
-    },
-    {
-      id: 5,
-      title: '블루베리 수확 & 잼 만들기',
-      farm: '베리팜',
-      location: '전남 고흥',
-      price: 32000,
-      image: '/blueberry-jam-making.jpg',
-      duration: '3.5시간',
-      capacity: '최대 10명',
-      rating: 4.9,
-      reviews: 78,
-      category: '요리',
-      tag: '인기',
-    },
-    {
-      id: 6,
-      title: '상추 수확 & 쌈밥 만들기',
-      farm: '초록들판',
-      location: '경기 양평',
-      price: 22000,
-      image: '/lettuce-harvest-korean-meal.jpg',
-      duration: '2시간',
-      capacity: '최대 15명',
-      rating: 4.6,
-      reviews: 41,
-      category: '요리',
-      tag: '베스트',
-    },
-  ]
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
-  // 필터링 및 정렬 로직
-  const filteredAndSortedExperiences = useMemo(() => {
-    let filtered = [...experiences]
+  // 체험 프로그램 목록 로드
+  useEffect(() => {
+    const fetchExperiences = async () => {
+      if (!mounted) return
+
+      setIsLoading(true)
+      try {
+        const params: { category?: string; page?: number; size?: number } = {
+          page: currentPage,
+          size: 20,
+        }
+        if (category !== 'all') {
+          params.category = category
+        }
+        const response = await experienceService.getExperiences(params)
+        // response.content가 배열인지 확인
+        const experienceData: Experience[] = Array.isArray(response?.content)
+          ? response.content
+          : []
+
+        // 각 체험의 농장 정보 가져오기
+        if (experienceData.length > 0) {
+          const experiencesWithFarmInfo: ExperienceCardData[] = await Promise.all(
+            experienceData.map(async (experience) => {
+              let farmName = ''
+              let farmLocation = ''
+              if (experience.farmId) {
+                try {
+                  const farmInfo = await farmService.getFarm(experience.farmId)
+                  farmName = farmInfo?.name || ''
+                  farmLocation = farmInfo?.address || ''
+                } catch (error) {
+                  console.warn(`농장 정보 로드 실패 (farmId: ${experience.farmId}):`, error)
+                }
+              }
+
+              return {
+                ...experience,
+                farmName,
+                farmLocation,
+                imageUrl: '/placeholder.svg', // TODO: API에서 이미지 정보 추가
+                rating: 0, // TODO: API에서 평점 정보 추가
+                reviewCount: 0, // TODO: API에서 리뷰 수 정보 추가
+              }
+            })
+          )
+          setExperiences(experiencesWithFarmInfo)
+        } else {
+          setExperiences([])
+        }
+        // 페이지네이션 정보 저장
+        const paginationData = {
+          totalPages: response.totalPages || 0,
+          totalElements: response.totalElements || 0,
+          hasNext: response.hasNext || false,
+          hasPrevious: response.hasPrevious || false,
+          page: response.page || 0,
+          size: response.size || 20,
+        }
+        setPaginationInfo(paginationData)
+      } catch (error) {
+        console.error('체험 프로그램 조회 실패:', error)
+        // 에러 발생 시 빈 배열로 설정
+        setExperiences([])
+        setPaginationInfo(null)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchExperiences()
+  }, [mounted, category, currentPage])
+
+  // API 데이터를 표시 형식으로 변환
+  const displayExperiences: ExperienceCardData[] = useMemo(() => {
+    if (!Array.isArray(experiences)) {
+      return []
+    }
+    return experiences.map(
+      (exp): ExperienceCardData => ({
+        experienceId: exp.experienceId,
+        farmId: exp.farmId,
+        title: exp.title,
+        description: exp.description,
+        pricePerPerson: exp.pricePerPerson,
+        capacity: exp.capacity,
+        durationMinutes: exp.durationMinutes,
+        availableStartDate: exp.availableStartDate,
+        availableEndDate: exp.availableEndDate,
+        status: exp.status,
+        createdAt: exp.createdAt,
+        updatedAt: exp.updatedAt,
+        // 농장 정보는 이미 로드되어 있음
+        farmName: exp.farmName || '',
+        farmLocation: exp.farmLocation || '',
+        imageUrl: exp.imageUrl || '/placeholder.svg',
+        rating: exp.rating || 0,
+        reviewCount: exp.reviewCount || 0,
+      })
+    )
+  }, [experiences])
+
+  // 클라이언트 사이드 검색 필터링 (서버 사이드 검색이 없을 경우)
+  const filteredExperiences: ExperienceCardData[] = useMemo(() => {
+    let filtered = [...displayExperiences]
 
     // 검색 필터
     if (searchQuery.trim()) {
@@ -119,41 +159,43 @@ export default function ExperiencesPage() {
       filtered = filtered.filter(
         (exp) =>
           exp.title.toLowerCase().includes(query) ||
-          exp.farm.toLowerCase().includes(query) ||
-          exp.location.toLowerCase().includes(query)
+          exp.farmName?.toLowerCase().includes(query) ||
+          exp.farmLocation?.toLowerCase().includes(query)
       )
-    }
-
-    // 카테고리 필터
-    if (category !== 'all') {
-      filtered = filtered.filter((exp) => exp.category === category)
     }
 
     // 정렬
     switch (sortBy) {
       case 'popular':
-        filtered.sort((a, b) => b.reviews - a.reviews)
+        filtered.sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0))
         break
       case 'latest':
-        filtered.sort((a, b) => b.id - a.id)
+        filtered.sort((a, b) => b.experienceId.localeCompare(a.experienceId))
         break
       case 'low-price':
-        filtered.sort((a, b) => a.price - b.price)
+        filtered.sort((a, b) => (a.pricePerPerson || 0) - (b.pricePerPerson || 0))
         break
       case 'high-price':
-        filtered.sort((a, b) => b.price - a.price)
+        filtered.sort((a, b) => (b.pricePerPerson || 0) - (a.pricePerPerson || 0))
         break
       case 'rating':
-        filtered.sort((a, b) => b.rating - a.rating)
+        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0))
         break
       default:
         break
     }
 
     return filtered
-  }, [searchQuery, category, sortBy])
+  }, [searchQuery, sortBy, displayExperiences])
 
   const hasActiveFilters = searchQuery.trim() || category !== 'all'
+
+  // 페이지 변경 핸들러
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // 페이지 변경 시 스크롤을 맨 위로
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const clearFilters = () => {
     setSearchQuery('')
@@ -230,11 +272,13 @@ export default function ExperiencesPage() {
             <p className="text-sm text-muted-foreground">
               총{' '}
               <span className="font-semibold text-foreground">
-                {filteredAndSortedExperiences.length}
+                {paginationInfo?.totalElements || filteredExperiences.length}
               </span>
               개의 체험 프로그램
-              {hasActiveFilters && (
-                <span className="ml-2 text-xs">(전체 {experiences.length}개 중)</span>
+              {paginationInfo && paginationInfo.totalPages > 1 && (
+                <span className="ml-2 text-xs">
+                  (페이지 {paginationInfo.page + 1} / {paginationInfo.totalPages})
+                </span>
               )}
             </p>
             {hasActiveFilters && (
@@ -250,7 +294,14 @@ export default function ExperiencesPage() {
             )}
           </div>
 
-          {filteredAndSortedExperiences.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-16">
+              <div className="text-lg font-semibold mb-2">로딩 중...</div>
+              <div className="text-sm text-muted-foreground">
+                체험 프로그램을 불러오는 중입니다.
+              </div>
+            </div>
+          ) : filteredExperiences.length === 0 ? (
             <div className="text-center py-16">
               <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">검색 결과가 없습니다</h3>
@@ -260,52 +311,97 @@ export default function ExperiencesPage() {
               </Button>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredAndSortedExperiences.map((exp, index) => (
-                <Card
-                  key={exp.id}
-                  className="overflow-hidden group hover:shadow-lg transition-shadow"
-                >
-                  <Link href={`/experiences/${exp.id}`}>
-                    <div className="relative h-48 overflow-hidden bg-muted">
-                      <Image
-                        src={exp.image || '/placeholder.svg'}
-                        alt={exp.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform"
-                        priority={index === 0}
-                      />
-                      <Badge className="absolute top-3 left-3">{exp.tag}</Badge>
-                    </div>
-                    <div className="p-5">
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
-                        <MapPin className="h-3 w-3" />
-                        <span>{exp.farm}</span>
-                        <span className="mx-1">•</span>
-                        <span>{exp.location}</span>
-                      </div>
-                      <h3 className="text-lg font-semibold mb-3">{exp.title}</h3>
-                      <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground mb-4">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{exp.duration}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          <span>{exp.capacity}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-xl font-bold text-primary">
-                          {exp.price.toLocaleString()}원
-                        </div>
-                        <div className="text-sm text-muted-foreground">1인 기준</div>
-                      </div>
-                    </div>
-                  </Link>
-                </Card>
-              ))}
-            </div>
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredExperiences.map((exp, index) => (
+                  <ExperienceCard
+                    key={exp.experienceId}
+                    experience={exp}
+                    className={index === 0 ? 'priority-image' : ''}
+                  />
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {paginationInfo && paginationInfo.totalPages > 0 && (
+                <div className="mt-8 flex justify-center">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            if (paginationInfo.hasPrevious) {
+                              handlePageChange(currentPage - 1)
+                            }
+                          }}
+                          className={
+                            !paginationInfo.hasPrevious
+                              ? 'pointer-events-none opacity-50'
+                              : 'cursor-pointer'
+                          }
+                        />
+                      </PaginationItem>
+
+                      {Array.from({ length: paginationInfo.totalPages }, (_, i) => i).map(
+                        (page) => {
+                          // 처음 3페이지, 마지막 3페이지, 현재 페이지 주변만 표시
+                          if (
+                            page === 0 ||
+                            page === 1 ||
+                            page === 2 ||
+                            page === paginationInfo.totalPages - 1 ||
+                            page === paginationInfo.totalPages - 2 ||
+                            page === paginationInfo.totalPages - 3 ||
+                            (page >= currentPage - 1 && page <= currentPage + 1)
+                          ) {
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    handlePageChange(page)
+                                  }}
+                                  isActive={page === currentPage}
+                                >
+                                  {page + 1}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )
+                          } else if (page === 3 || page === paginationInfo.totalPages - 4) {
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )
+                          }
+                          return null
+                        }
+                      )}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            if (paginationInfo.hasNext) {
+                              handlePageChange(currentPage + 1)
+                            }
+                          }}
+                          className={
+                            !paginationInfo.hasNext
+                              ? 'pointer-events-none opacity-50'
+                              : 'cursor-pointer'
+                          }
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

@@ -1,79 +1,59 @@
 import { sellerApi, settlementApi } from '../client'
-import type {
-  Product,
-  Experience,
-  Order,
-  SellerDashboard,
-  Settlement,
+import {
+  SellerApplyRequestDto,
+  MySettlementResponse,
   PaginatedResponse,
   PaginationParams,
+  SellerInfoData,
 } from '../types'
 
 export const sellerService = {
-  // 대시보드 조회
-  async getDashboard(): Promise<SellerDashboard> {
-    return sellerApi.get<SellerDashboard>('/api/seller/dashboard')
+  // 판매자 신청
+  async applyForSeller(data: SellerApplyRequestDto): Promise<void> {
+    return sellerApi.post('/api/v1/sellers/apply', data)
   },
 
-  // 판매자 상품 목록
-  async getMyProducts(params?: PaginationParams): Promise<PaginatedResponse<Product>> {
-    return sellerApi.get<PaginatedResponse<Product>>('/api/seller/products', { params })
+  // 내 정산 정보 조회
+  async getMySettlements(): Promise<MySettlementResponse> {
+    const response = await sellerApi.get<{ data: MySettlementResponse }>('/api/v1/settlements/me')
+    return response.data
   },
 
-  // 상품 등록
-  async createProduct(data: Partial<Product>): Promise<Product> {
-    return sellerApi.post<Product>('/api/seller/products', data)
+  // 판매자 정보 조회
+  async getSellerInfo(userId: string): Promise<SellerInfoData> {
+    const response = await sellerApi.get<{ status: number; data: SellerInfoData; message: string }>(
+      `/api/v1/sellers/sellerInfo/${userId}`
+    )
+    return response.data
   },
 
-  // 상품 수정
-  async updateProduct(id: number, data: Partial<Product>): Promise<Product> {
-    return sellerApi.put<Product>(`/api/seller/products/${id}`, data)
-  },
-
-  // 상품 삭제
-  async deleteProduct(id: number): Promise<void> {
-    return sellerApi.delete(`/api/seller/products/${id}`)
-  },
-
-  // 판매자 체험 목록
-  async getMyExperiences(params?: PaginationParams): Promise<PaginatedResponse<Experience>> {
-    return sellerApi.get<PaginatedResponse<Experience>>('/api/seller/experiences', { params })
-  },
-
-  // 체험 등록
-  async createExperience(data: Partial<Experience>): Promise<Experience> {
-    return sellerApi.post<Experience>('/api/seller/experiences', data)
-  },
-
-  // 체험 수정
-  async updateExperience(id: number, data: Partial<Experience>): Promise<Experience> {
-    return sellerApi.put<Experience>(`/api/seller/experiences/${id}`, data)
-  },
-
-  // 체험 삭제
-  async deleteExperience(id: number): Promise<void> {
-    return sellerApi.delete(`/api/seller/experiences/${id}`)
-  },
-
-  // 판매자 주문 목록
-  async getMyOrders(
-    params?: PaginationParams & { status?: string }
-  ): Promise<PaginatedResponse<Order>> {
-    return sellerApi.get<PaginatedResponse<Order>>('/api/seller/orders', { params })
-  },
-
-  // 주문 상태 변경
-  async updateOrderStatus(orderId: number, status: string): Promise<Order> {
-    return sellerApi.patch<Order>(`/api/seller/orders/${orderId}/status`, { status })
-  },
-
-  // 정산 목록 조회
-  async getSettlements(params?: PaginationParams): Promise<PaginatedResponse<Settlement>> {
-    return settlementApi.get<PaginatedResponse<Settlement>>('/api/settlements', { params })
-  },
-
-  // 정산 상세 조회
-  async getSettlement(id: number): Promise<Settlement> {
-    return settlementApi.get<Settlement>(`/api/settlements/${id}`)
-  },
+  // 정산 내역 조회 (support-service 사용)
+  // async getSettlements(params?: PaginationParams): Promise<PaginatedResponse<Settlement>> {
+  //   try {
+  //     const response = await settlementApi.get<{ data: PaginatedResponse<Settlement> }>(
+  //       '/api/v1/settlements',
+  //       {
+  //         params: params as Record<string, string | number | boolean | undefined> | undefined,
+  //       }
+  //     )
+  //     // API 응답이 { status, data: { content, ... }, message } 형태이므로 data 필드 추출
+  //     return response.data
+  //   } catch (error: unknown) {
+  //     // 404 에러는 정산 내역이 없는 것으로 처리 (정상 케이스)
+  //     if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+  //       // 빈 페이지네이션 응답 반환
+  //       return {
+  //         content: [],
+  //         page: params?.page || 0,
+  //         size: params?.size || 20,
+  //         totalElements: 0,
+  //         totalPages: 0,
+  //         hasNext: false,
+  //         hasPrevious: false,
+  //       }
+  //     }
+  //     // 다른 에러는 그대로 throw
+  //     throw error
+  //   }
+  // },
 }

@@ -1,4 +1,4 @@
-import { sellerApi } from '../client'
+import { experienceApi } from '../client'
 
 export interface UploadResponse {
   success: boolean
@@ -33,8 +33,8 @@ export const uploadService = {
       formData.append('type', type)
     }
 
-    // 백엔드 API로 전송
-    const response = await sellerApi.post<UploadResponse>('/api/files/upload', formData, {
+    // 백엔드 API로 전송 (Support Service)
+    const response = await experienceApi.post<UploadResponse>('/api/v1/files/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -58,8 +58,8 @@ export const uploadService = {
       formData.append('type', type)
     }
 
-    const response = await sellerApi.post<MultipleUploadResponse>(
-      '/api/files/upload/multiple',
+    const response = await experienceApi.post<MultipleUploadResponse>(
+      '/api/v1/files/upload/multiple',
       formData,
       {
         headers: {
@@ -112,7 +112,7 @@ export const uploadService = {
    * @param fileUrl - 삭제할 파일 URL
    */
   async deleteFile(fileUrl: string): Promise<void> {
-    await sellerApi.delete('/api/files', {
+    await experienceApi.delete('/api/v1/files', {
       params: { url: fileUrl },
     })
   },

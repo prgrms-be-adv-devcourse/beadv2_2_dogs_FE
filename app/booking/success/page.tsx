@@ -29,11 +29,17 @@ export default function BookingSuccessPage() {
             <span className="font-mono font-semibold text-foreground">EXP-2025-001234</span>
           </p>
 
-          <p className="text-muted-foreground mb-8">
+          <p className="text-muted-foreground mb-4">
             농장 체험 예약이 성공적으로 완료되었습니다.
             <br />
             예약 확인 메일이 발송되었으니 확인해주세요.
           </p>
+
+          <div className="bg-muted/50 rounded-lg p-4 mb-8">
+            <p className="text-sm text-muted-foreground mb-1">결제 수단</p>
+            <p className="font-semibold">현장 결제</p>
+            <p className="text-xs text-muted-foreground mt-2">체험 당일 현장에서 결제해주세요</p>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button size="lg" asChild>

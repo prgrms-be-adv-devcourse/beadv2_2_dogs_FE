@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { MapPin, Star, Search, Filter, X, Phone, Mail } from 'lucide-react'
+import { MapPin, Search, Filter, X } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Header } from '@/components/layout/header'
+import { farmService } from '@/lib/api/services/farm'
+import type { Farm } from '@/lib/api/types'
 import {
   Select,
   SelectContent,
@@ -16,134 +18,95 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { FarmCard } from '@/components/product/farm-card'
+
+interface DisplayFarm {
+  id: string
+  name: string
+  location: string
+  region: string
+  image: string
+  rating: number
+  reviews: number
+  products: number
+  experiences: number
+  specialties: string[]
+  certification: string[]
+}
+
+function inferRegion(address?: string | null): string {
+  if (!address) return '기타'
+  if (address.includes('경기')) return '경기'
+  if (address.includes('강원')) return '강원'
+  if (address.includes('충청')) return '충청'
+  if (address.includes('전라')) return '전라'
+  if (address.includes('경북')) return '경북'
+  if (address.includes('경남')) return '경남'
+  if (address.includes('제주')) return '제주'
+  return '기타'
+}
+
+function mapFarmToDisplay(farm: Farm): DisplayFarm {
+  const location = farm.address || '주소 정보 없음'
+  const region = inferRegion(farm.address)
+  const image = farm.images && farm.images.length > 0 ? farm.images[0] : '/placeholder.svg'
+  const rating = farm.rating ?? 0
+  const reviews = farm.reviewCount ?? 0
+  const products = farm.productCount ?? 0
+  const experiences = farm.experienceCount ?? 0
+  const certification = farm.certifications ?? []
+
+  const specialties =
+    farm.description
+      ?.split(/[,/\\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 5) || []
+
+  return {
+    id: farm.id,
+    name: farm.name,
+    location,
+    region,
+    image,
+    rating,
+    reviews,
+    products,
+    experiences,
+    specialties,
+    certification,
+  }
+}
 
 export default function FarmsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [region, setRegion] = useState('all')
   const [sortBy, setSortBy] = useState('popular')
+  const [farms, setFarms] = useState<DisplayFarm[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const farms = [
-    {
-      id: 1,
-      name: '햇살농장',
-      location: '충남 당진',
-      region: '충청',
-      image: '/farm-1.jpg',
-      rating: 4.8,
-      reviews: 124,
-      products: 12,
-      experiences: 3,
-      specialties: ['유기농 토마토', '무농약 상추'],
-      certification: ['유기농 인증', 'GAP 인증'],
-      phone: '010-1234-5678',
-      email: 'sunshine@barofarm.com',
-    },
-    {
-      id: 2,
-      name: '초록들판',
-      location: '경기 양평',
-      region: '경기',
-      image: '/farm-2.jpg',
-      rating: 4.9,
-      reviews: 89,
-      products: 8,
-      experiences: 2,
-      specialties: ['무농약 상추', '친환경 채소'],
-      certification: ['무농약 인증'],
-      phone: '010-2345-6789',
-      email: 'greenfield@barofarm.com',
-    },
-    {
-      id: 3,
-      name: '달콤농원',
-      location: '전북 완주',
-      region: '전라',
-      image: '/farm-3.jpg',
-      rating: 5.0,
-      reviews: 203,
-      products: 15,
-      experiences: 4,
-      specialties: ['친환경 딸기', '유기농 블루베리'],
-      certification: ['친환경 인증', '유기농 인증'],
-      phone: '010-3456-7890',
-      email: 'sweetfarm@barofarm.com',
-    },
-    {
-      id: 4,
-      name: '푸른밭농장',
-      location: '강원 평창',
-      region: '강원',
-      image: '/farm-4.jpg',
-      rating: 4.7,
-      reviews: 67,
-      products: 10,
-      experiences: 2,
-      specialties: ['유기농 감자', '무농약 당근'],
-      certification: ['유기농 인증'],
-      phone: '010-4567-8901',
-      email: 'bluefield@barofarm.com',
-    },
-    {
-      id: 5,
-      name: '사과마을',
-      location: '경북 청송',
-      region: '경북',
-      image: '/farm-5.jpg',
-      rating: 4.9,
-      reviews: 156,
-      products: 18,
-      experiences: 3,
-      specialties: ['무농약 사과', '유기농 배'],
-      certification: ['무농약 인증', 'GAP 인증'],
-      phone: '010-5678-9012',
-      email: 'applevillage@barofarm.com',
-    },
-    {
-      id: 6,
-      name: '건강농장',
-      location: '제주',
-      region: '제주',
-      image: '/farm-6.jpg',
-      rating: 4.6,
-      reviews: 92,
-      products: 9,
-      experiences: 1,
-      specialties: ['유기농 당근', '친환경 브로콜리'],
-      certification: ['유기농 인증'],
-      phone: '010-6789-0123',
-      email: 'healthfarm@barofarm.com',
-    },
-    {
-      id: 7,
-      name: '베리팜',
-      location: '전남 고흥',
-      region: '전라',
-      image: '/farm-7.jpg',
-      rating: 4.8,
-      reviews: 134,
-      products: 11,
-      experiences: 3,
-      specialties: ['친환경 블루베리', '유기농 딸기'],
-      certification: ['친환경 인증', '유기농 인증'],
-      phone: '010-7890-1234',
-      email: 'berryfarm@barofarm.com',
-    },
-    {
-      id: 8,
-      name: '그린농원',
-      location: '충북 충주',
-      region: '충청',
-      image: '/farm-8.jpg',
-      rating: 4.7,
-      reviews: 78,
-      products: 7,
-      experiences: 2,
-      specialties: ['무농약 브로콜리', '친환경 양배추'],
-      certification: ['무농약 인증'],
-      phone: '010-8901-2345',
-      email: 'greenfarm@barofarm.com',
-    },
-  ]
+  useEffect(() => {
+    const fetchFarms = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const response = await farmService.getFarms({ page: 0, size: 50 })
+        const content = Array.isArray(response?.content) ? response.content : []
+        const mapped = content.map(mapFarmToDisplay)
+        setFarms(mapped)
+      } catch (err: unknown) {
+        console.error('농장 목록 조회 실패:', err)
+        setError(
+          (err as { message?: string })?.message || '농장 목록을 가져오는 중 오류가 발생했습니다.'
+        )
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchFarms()
+  }, [])
 
   // 필터링 및 정렬 로직
   const filteredAndSortedFarms = useMemo(() => {
@@ -170,9 +133,10 @@ export default function FarmsPage() {
       case 'popular':
         filtered.sort((a, b) => b.reviews - a.reviews)
         break
-      case 'rating':
-        filtered.sort((a, b) => b.rating - a.rating)
-        break
+      // TODO: 평점 기능 추가 예정
+      // case 'rating':
+      //   filtered.sort((a, b) => b.rating - a.rating)
+      //   break
       case 'products':
         filtered.sort((a, b) => b.products - a.products)
         break
@@ -184,7 +148,7 @@ export default function FarmsPage() {
     }
 
     return filtered
-  }, [searchQuery, region, sortBy])
+  }, [searchQuery, region, sortBy, farms])
 
   const hasActiveFilters = searchQuery.trim() || region !== 'all'
 
@@ -242,7 +206,8 @@ export default function FarmsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="popular">인기순</SelectItem>
-                <SelectItem value="rating">평점순</SelectItem>
+                {/* TODO: 평점 기능 추가 예정 */}
+                {/* <SelectItem value="rating">평점순</SelectItem> */}
                 <SelectItem value="products">상품 많은 순</SelectItem>
                 <SelectItem value="name">이름순</SelectItem>
               </SelectContent>
@@ -279,7 +244,19 @@ export default function FarmsPage() {
             )}
           </div>
 
-          {filteredAndSortedFarms.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-16">
+              <p className="text-muted-foreground">농장 정보를 불러오는 중입니다...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-16">
+              <h3 className="text-lg font-semibold mb-2">농장 정보를 불러오지 못했습니다</h3>
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                다시 시도하기
+              </Button>
+            </div>
+          ) : filteredAndSortedFarms.length === 0 ? (
             <div className="text-center py-16">
               <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">검색 결과가 없습니다</h3>
@@ -291,80 +268,17 @@ export default function FarmsPage() {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredAndSortedFarms.map((farm) => (
-                <Card
+                <FarmCard
                   key={farm.id}
-                  className="overflow-hidden group hover:shadow-lg transition-shadow"
-                >
-                  <Link href={`/farms/${farm.id}`} className="block">
-                    <div className="relative h-48 overflow-hidden bg-muted">
-                      <Image
-                        src={farm.image || '/placeholder.svg'}
-                        alt={farm.name}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform"
-                      />
-                    </div>
-                  </Link>
-                  <div className="p-5">
-                    <Link href={`/farms/${farm.id}`} className="block">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="text-xl font-semibold mb-1 hover:text-primary transition-colors">
-                            {farm.name}
-                          </h3>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            <span>{farm.location}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-primary text-primary" />
-                          <span className="text-sm font-medium">{farm.rating}</span>
-                          <span className="text-sm text-muted-foreground">({farm.reviews})</span>
-                        </div>
-                      </div>
-                    </Link>
-
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {farm.certification.map((cert) => (
-                        <Badge key={cert} variant="secondary" className="text-xs">
-                          {cert}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">판매 상품</span>
-                        <span className="font-medium">{farm.products}개</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">체험 프로그램</span>
-                        <span className="font-medium">{farm.experiences}개</span>
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <p className="text-sm text-muted-foreground mb-2">주요 특산품</p>
-                      <div className="flex flex-wrap gap-1">
-                        {farm.specialties.map((specialty) => (
-                          <Badge key={specialty} variant="outline" className="text-xs">
-                            {specialty}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 pt-4 border-t">
-                      <Button variant="outline" size="sm" className="flex-1" asChild>
-                        <Link href={`/farms/${farm.id}`}>농장 상세보기</Link>
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1" asChild>
-                        <Link href={`/products?farm=${farm.id}`}>상품 보기</Link>
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
+                  id={farm.id}
+                  name={farm.name}
+                  location={farm.location}
+                  products={farm.products}
+                  experiences={farm.experiences}
+                  image={farm.image}
+                  specialties={farm.specialties}
+                  certification={farm.certification}
+                />
               ))}
             </div>
           )}
