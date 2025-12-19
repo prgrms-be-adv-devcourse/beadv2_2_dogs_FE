@@ -42,6 +42,10 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# 보안 강화: 불필요한 도구 제거 (SECURITY_INCIDENT_REPORT.md)
+# curl, wget 등은 빌드 단계에서만 필요하므로 런타임에서는 제거
+RUN apk del --no-cache curl wget 2>/dev/null || true
+
 # Copy built application
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
