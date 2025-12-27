@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: barofarm-frontend
     restart: unless-stopped
+    init: true
 
     # 서버(브리지) 모드: 호스트 백엔드에 host.docker.internal로 접근
     ports:
