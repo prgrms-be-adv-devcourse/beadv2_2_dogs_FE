@@ -81,41 +81,129 @@
 ```
 beadv2_2_dogs_FE/
 ├── app/                      # Next.js App Router
-│   ├── (auth)/              # 인증 관련 페이지
-│   │   ├── login/
-│   │   └── signup/
+│   ├── about/               # 소개 페이지
+│   ├── admin/               # 관리자 페이지
+│   ├── api/                 # API 라우트 (이벤트 로깅 등)
+│   ├── booking/             # 체험 예약
+│   ├── bookings/            # 예약 목록
+│   ├── cart/                # 장바구니
+│   ├── checkout/            # 결제 페이지
+│   ├── contact/             # 문의
+│   ├── deposit/             # 예치금 충전
+│   ├── experiences/         # 체험 관련 페이지
+│   │   └── [id]/
+│   ├── farmer/              # 농가(판매자) 페이지
+│   │   ├── bookings/        # 예약 관리
+│   │   ├── dashboard/       # 대시보드
+│   │   ├── experiences/     # 체험 관리
+│   │   ├── farm/            # 농장 정보
+│   │   ├── forgot-password/ # 비밀번호 찾기
+│   │   ├── guide/           # 가이드
+│   │   ├── login/           # 로그인
+│   │   ├── orders/          # 주문 관리
+│   │   ├── products/        # 상품 관리
+│   │   ├── settings/        # 설정
+│   │   └── signup/          # 회원가입
+│   ├── farms/               # 농장 찾기
+│   │   └── [id]/
+│   ├── forgot-password/     # 비밀번호 찾기
+│   ├── help/                # 도움말
+│   ├── login/               # 로그인
+│   ├── notifications/       # 알림
+│   ├── oauth/               # OAuth 인증
+│   │   └── kakao/
+│   ├── order/               # 주문 상세
+│   │   ├── [id]/
+│   │   ├── fail/
+│   │   └── success/
+│   ├── orders/              # 주문 목록
 │   ├── products/            # 상품 관련 페이지
 │   │   ├── [id]/
+│   │   ├── error.tsx
+│   │   ├── loading.tsx
 │   │   └── page.tsx
-│   ├── experiences/         # 체험 관련 페이지
-│   ├── farmer/              # 농가(판매자) 페이지
-│   │   ├── dashboard/
-│   │   ├── products/
+│   ├── profile/             # 프로필
 │   │   ├── orders/
-│   │   ├── login/
-│   │   └── signup/
-│   ├── cart/                # 장바구니
-│   ├── checkout/            # 결제
-│   ├── order/               # 주문
+│   │   └── sections/
+│   ├── reviews/             # 리뷰
+│   ├── search/              # 검색
+│   ├── seller/              # 판매자 페이지
+│   │   ├── orders/
+│   │   ├── products/
+│   │   ├── reviews/
+│   │   └── settlement/
+│   ├── signup/              # 회원가입
+│   ├── terms/               # 이용약관
+│   ├── wishlist/            # 위시리스트
+│   ├── globals.css          # 글로벌 스타일
 │   ├── layout.tsx           # 루트 레이아웃
 │   └── page.tsx             # 메인 페이지
-├── components/
+├── components/              # 컴포넌트
 │   ├── ui/                  # 공통 UI 컴포넌트 (shadcn/ui)
 │   └── theme-provider.tsx   # 테마 프로바이더
-├── lib/
+├── lib/                     # 라이브러리 및 유틸리티
 │   ├── api/                 # API 클라이언트 및 서비스
 │   │   ├── client.ts        # Fetch 래퍼
-│   │   ├── config.ts        # 서비스 URL 설정
-│   │   ├── types.ts         # TypeScript 타입
-│   │   └── services/        # 서비스별 API 함수
+│   │   ├── config.ts        # 서비스 URL 설정 (Gateway 기반)
+│   │   ├── index.ts         # API 서비스 export
+│   │   ├── services/        # 서비스별 API 함수
+│   │   │   ├── address.ts
+│   │   │   ├── admin.ts
+│   │   │   ├── auth.ts
+│   │   │   ├── cart.ts
+│   │   │   ├── category.ts
+│   │   │   ├── chatbot.ts
+│   │   │   ├── delivery.ts
+│   │   │   ├── experience.ts
+│   │   │   ├── farm.ts
+│   │   │   ├── notification.ts
+│   │   │   ├── order.ts
+│   │   │   ├── payment.ts
+│   │   │   ├── product.ts
+│   │   │   ├── review.ts
+│   │   │   ├── search.ts
+│   │   │   ├── seller.ts
+│   │   │   ├── s3-upload.ts
+│   │   │   └── upload.ts
+│   │   └── types/           # TypeScript 타입 정의
+│   ├── address-store.ts     # 주소 상태 관리
 │   ├── cart-store.ts        # 장바구니 상태 관리
-│   └── utils.ts             # 유틸리티 함수
+│   ├── security.ts          # 보안 관련 유틸리티
+│   ├── upload.ts            # 파일 업로드 유틸리티
+│   └── utils/               # 유틸리티 함수
+│       ├── buy-now-checkout.ts
+│       ├── buy-now-storage.ts
+│       ├── error-handler.ts
+│       ├── event-logger.ts
+│       ├── image-processor.ts
+│       ├── product-images.ts
+│       ├── search-history.ts
+│       └── search.ts
 ├── hooks/                   # 커스텀 훅
 ├── public/                  # 정적 파일
+├── scripts/                 # 배포 및 유틸리티 스크립트
+│   ├── deploy-frontend.sh   # 프론트엔드 배포
+│   ├── rollback.sh          # 롤백 스크립트
+│   ├── cleanup-images.sh    # 이미지 정리
+│   ├── list-versions.sh     # 버전 목록
+│   └── ...                  # 기타 스크립트
+├── docs/                    # 문서
+│   ├── CHATBOT_API_SPEC.md
+│   ├── S3_PRESIGNED_URL_UPLOAD.md
+│   └── issues/              # 이슈 문서
+├── k8s/                     # Kubernetes 설정
+│   └── frontend-ingress.yaml
 ├── styles/                  # 글로벌 스타일
+│   └── globals.css
 ├── .husky/                  # Git Hooks
+├── .github/                 # GitHub 설정
+│   └── workflows/
+│       └── ci-cd.yml        # CI/CD 파이프라인
 ├── docker-compose.yml       # Docker 배포 설정
 ├── Dockerfile               # Docker 이미지 빌드
+├── nginx.conf               # Nginx 설정
+├── nginx-docker.conf        # Docker용 Nginx 설정
+├── next.config.mjs          # Next.js 설정
 └── package.json
 ```
 
@@ -229,53 +317,114 @@ pnpm format:check
 
 ## 🔌 API 서비스
 
-### 백엔드 서비스 포트
+### 백엔드 서비스 구조
 
-| 모듈         | 포트 | 포함 도메인                                                    |
-| ------------ | ---- | -------------------------------------------------------------- |
-| eureka       | 8761 | Service Registry                                               |
-| config       | 8888 | Config Server                                                  |
-| gateway      | 8080 | API Gateway                                                    |
-| baro-auth    | 8081 | auth                                                           |
-| baro-buyer   | 8082 | buyer, cart, product                                           |
-| baro-seller  | 8085 | seller, farm                                                   |
-| baro-order   | 8087 | order, payment                                                 |
-| baro-support | 8089 | settlement, delivery, notification, experience, search, review |
+프론트엔드는 **API Gateway**를 통해 모든 백엔드 서비스에 접근합니다.
+
+#### API Gateway
+
+| 항목            | 값                                  | 설명                   |
+| --------------- | ----------------------------------- | ---------------------- |
+| **Gateway URL** | `http://3.34.14.73:8080` (프로덕션) | 모든 API 요청의 진입점 |
+| **포트**        | 8080                                | Gateway 서비스 포트    |
+
+#### 백엔드 마이크로서비스
+
+모든 서비스는 Gateway를 통해 라우팅되며, 각 서비스는 다음과 같은 prefix로 접근합니다:
+
+| 서비스 Prefix         | 포함 도메인                                         | 설명          |
+| --------------------- | --------------------------------------------------- | ------------- |
+| `/auth-service`       | auth                                                | 인증 서비스   |
+| `/buyer-service`      | buyer, cart, product, inventory                     | 구매자 서비스 |
+| `/seller-service`     | seller, farm                                        | 판매자 서비스 |
+| `/order-service`      | order                                               | 주문 서비스   |
+| `/payment-service`    | payment                                             | 결제 서비스   |
+| `/support-service`    | delivery, notification, experience, review, deposit | 지원 서비스   |
+| `/settlement-service` | settlement                                          | 정산 서비스   |
+| `/ai-service`         | search, recommend, review, season                   | AI 서비스     |
+
+#### 실제 서비스 포트 (내부)
+
+| 모듈            | 포트 | 설명                                                |
+| --------------- | ---- | --------------------------------------------------- |
+| eureka          | 8761 | Service Registry                                    |
+| config          | 8888 | Config Server                                       |
+| gateway         | 8080 | API Gateway                                         |
+| baro-auth       | 8081 | auth                                                |
+| baro-buyer      | 8082 | buyer, cart, product                                |
+| baro-seller     | 8085 | seller, farm                                        |
+| baro-order      | 8087 | order                                               |
+| baro-payment    | 8088 | payment                                             |
+| baro-support    | 8089 | delivery, notification, experience, review, deposit |
+| baro-settlement | 8090 | settlement (DaemonSet 배포)                         |
+| baro-ai         | 8092 | search, recommend, review, season                   |
+
+> **참고**: 프론트엔드는 직접 마이크로서비스에 접근하지 않으며, Gateway를 통해서만 API를 호출합니다.
 
 ### API 사용 예시
+
+모든 API 호출은 Gateway를 통해 자동으로 라우팅됩니다.
 
 ```typescript
 import { authService, productService, cartService } from '@/lib/api'
 
-// 로그인
+// 로그인 (Gateway → /auth-service/api/auth/login)
 const { accessToken, user } = await authService.login({
   email: 'user@example.com',
   password: 'password123',
 })
 
-// 상품 목록 조회
+// 상품 목록 조회 (Gateway → /buyer-service/api/products)
 const products = await productService.getProducts({
   page: 0,
   size: 20,
   category: '채소',
 })
 
-// 장바구니에 추가
+// 장바구니에 추가 (Gateway → /buyer-service/api/cart)
 await cartService.addToCart({
   productId: 1,
   quantity: 2,
 })
 ```
 
+**API 호출 흐름:**
+
+1. 프론트엔드 → API Gateway (`http://3.34.14.73:8080`)
+2. Gateway → 해당 마이크로서비스 (예: `/buyer-service/api/products`)
+3. 마이크로서비스 → 응답 반환
+4. Gateway → 프론트엔드
+
 ### 환경 변수
 
 ```env
 # .env.local
-NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8081
-NEXT_PUBLIC_PRODUCT_SERVICE_URL=http://localhost:8084
-NEXT_PUBLIC_CART_SERVICE_URL=http://localhost:8083
-# ... 기타 서비스 URL
+# API Gateway URL (모든 서비스의 진입점)
+NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:8080
+# 또는 프로덕션 환경
+# NEXT_PUBLIC_API_GATEWAY_URL=http://3.34.14.73:8080
+
+# API Base URL (Gateway URL과 동일하게 설정)
+NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_GATEWAY_URL}
+
+# Gateway URL (별칭, API_GATEWAY_URL과 동일)
+NEXT_PUBLIC_GATEWAY_URL=${NEXT_PUBLIC_API_GATEWAY_URL}
+
+# 토스페이먼츠 클라이언트 키
+NEXT_PUBLIC_TOSS_CLIENT_KEY=test_ck_ma60RZblrqReBBKpoZ7E8wzYWBn1
+
+# 이미지 베이스 URL (Nginx를 통해 서빙)
+NEXT_PUBLIC_IMAGE_BASE_URL=/uploads
+
+# 카카오 OAuth
+NEXT_PUBLIC_KAKAO_CLIENT_ID=your_kakao_client_id
+NEXT_PUBLIC_KAKAO_REDIRECT_URI=http://localhost:3000/oauth/kakao/callback
+
+# API Rewrites 사용 여부 (Nginx 사용 시 false)
+NEXT_PUBLIC_USE_API_REWRITES=false
 ```
+
+> **참고**: 모든 API 요청은 `NEXT_PUBLIC_API_GATEWAY_URL`을 통해 Gateway로 전달되며, Gateway가 각 마이크로서비스로 라우팅합니다.
 
 ---
 
