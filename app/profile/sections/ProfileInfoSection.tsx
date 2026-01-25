@@ -50,7 +50,7 @@ export function ProfileInfoSection({
             <h2 className="text-lg font-semibold">{user.name || user.email}</h2>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="outline" className="text-xs">
-                {user.role === 'SELLER' ? '판매자' : '일반 회원'}
+                {user.role === 'SELLER' ? '판매자' : user.role === 'ADMIN' ? '관리자' : '일반회원'}
               </Badge>
             </div>
           </div>

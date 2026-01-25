@@ -37,28 +37,28 @@ import type {
   AdminUserSummaryResponse,
   AdminUserType,
   AdminUserState,
-  SellerStatus,
 } from '@/lib/api/types'
+import type { SellerStatus } from '@/lib/api/types/admin'
 
 const USER_TYPE_OPTIONS: { value: AdminUserType | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: '\uC804\uCCB4' },
-  { value: 'SELLER', label: '\uD310\uB9E4\uC790' },
-  { value: 'CUSTOMER', label: '\uAD6C\uB9E4\uC790' },
-  { value: 'ADMIN', label: '\uAD00\uB9AC\uC790' },
+  { value: 'ALL', label: '전체' },
+  { value: 'SELLER', label: '판매자' },
+  { value: 'CUSTOMER', label: '일반회원' },
+  { value: 'ADMIN', label: '관리자' },
 ]
 
 const USER_STATE_OPTIONS: { value: AdminUserState | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: '\uC804\uCCB4' },
-  { value: 'ACTIVE', label: '\uD65C\uC131' },
-  { value: 'SUSPENDED', label: '\uC815\uC9C0' },
-  { value: 'BLOCKED', label: '\uCC28\uB2E8' },
-  { value: 'WITHDRAWN', label: '\uD0C8\uD1F4' },
+  { value: 'ALL', label: '전체' },
+  { value: 'ACTIVE', label: '활성' },
+  { value: 'SUSPENDED', label: '정지' },
+  { value: 'BLOCKED', label: '차단' },
+  { value: 'WITHDRAWN', label: '탈퇴' },
 ]
 
 const SELLER_ACTIONS: { value: SellerStatus; label: string }[] = [
-  { value: 'APPROVED', label: '\uC2B9\uC778' },
-  { value: 'REJECTED', label: '\uAC70\uC808' },
-  { value: 'SUSPENDED', label: '\uC815\uC9C0' },
+  { value: 'APPROVED' as SellerStatus, label: '승인' },
+  { value: 'REJECTED' as SellerStatus, label: '거절' },
+  { value: 'SUSPENDED' as SellerStatus, label: '정지' },
 ]
 
 const formatDateTime = (value?: string | null) => {
@@ -144,8 +144,8 @@ export default function AdminUsersPage() {
       } catch (error) {
         console.error('Failed to load admin users:', error)
         toast({
-          title: '\uC0AC\uC6A9\uC790 \uBAA9\uB85D \uC870\uD68C \uC2E4\uD328',
-          description: '\uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.',
+          title: '사용자 목록 조회 실패',
+          description: '잠시 후 다시 시도해 주세요.',
           variant: 'destructive',
         })
       } finally {
@@ -170,8 +170,8 @@ export default function AdminUsersPage() {
         reason: reason.trim() ? reason.trim() : undefined,
       })
       toast({
-        title: '\uCC98\uB9AC \uC644\uB8CC',
-        description: '\uC0C1\uD0DC\uAC00 \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4.',
+        title: '처리 완료',
+        description: '상태가 변경되었습니다.',
       })
       setActionTarget(null)
       setReason('')
@@ -182,9 +182,8 @@ export default function AdminUsersPage() {
     } catch (error) {
       console.error('Failed to update seller status:', error)
       toast({
-        title: '\uCC98\uB9AC \uC2E4\uD328',
-        description:
-          '\uC0C1\uD0DC \uBCC0\uACBD\uC744 \uC644\uB8CC\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.',
+        title: '처리 실패',
+        description: '상태 변경을 완료하지 못했습니다.',
         variant: 'destructive',
       })
     } finally {
@@ -205,13 +204,9 @@ export default function AdminUsersPage() {
       <main className="container mx-auto max-w-7xl px-6 py-10">
         <div className="mb-6 flex flex-col gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              {'\uAD00\uB9AC\uC790 \uC0AC\uC6A9\uC790 \uAD00\uB9AC'}
-            </h1>
+            <h1 className="text-2xl font-semibold text-foreground">{'관리자 사용자 관리'}</h1>
             <p className="text-sm text-muted-foreground">
-              {
-                '\uD544\uD130\uB97C \uC801\uC6A9\uD558\uC5EC \uC0AC\uC6A9\uC790 \uBAA9\uB85D\uC744 \uAD00\uB9AC\uD558\uC138\uC694.'
-              }
+              {'필터를 적용하여 사용자 목록을 관리하세요.'}
             </p>
           </div>
 
@@ -222,7 +217,7 @@ export default function AdminUsersPage() {
                 onValueChange={(value) => setTypeFilter(value as AdminUserType | 'ALL')}
               >
                 <SelectTrigger className="w-full sm:w-44">
-                  <SelectValue placeholder={'\uC720\uD615'} />
+                  <SelectValue placeholder={'유형'} />
                 </SelectTrigger>
                 <SelectContent>
                   {USER_TYPE_OPTIONS.map((option) => (
@@ -238,7 +233,7 @@ export default function AdminUsersPage() {
                 onValueChange={(value) => setStateFilter(value as AdminUserState | 'ALL')}
               >
                 <SelectTrigger className="w-full sm:w-44">
-                  <SelectValue placeholder={'\uC0C1\uD0DC'} />
+                  <SelectValue placeholder={'상태'} />
                 </SelectTrigger>
                 <SelectContent>
                   {USER_STATE_OPTIONS.map((option) => (
@@ -254,7 +249,7 @@ export default function AdminUsersPage() {
               <Input
                 value={keywordInput}
                 onChange={(event) => setKeywordInput(event.target.value)}
-                placeholder={'\uC774\uBA54\uC77C \uB610\uB294 \uC774\uB984 \uAC80\uC0C9'}
+                placeholder={'이메일 또는 이름 검색'}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') {
                     event.preventDefault()
@@ -263,7 +258,7 @@ export default function AdminUsersPage() {
                 }}
               />
               <Button onClick={handleSearch} className="shrink-0">
-                {'\uAC80\uC0C9'}
+                {'검색'}
               </Button>
             </div>
           </div>
@@ -281,20 +276,20 @@ export default function AdminUsersPage() {
                 <TableHead>User State</TableHead>
                 <TableHead>Last Login</TableHead>
                 <TableHead>Created At</TableHead>
-                <TableHead>{'\uC561\uC158'}</TableHead>
+                <TableHead>{'액션'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
-                    {'\uB85C\uB529 \uC911...'}
+                    {'로딩 중...'}
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
-                    {'\uC870\uD68C \uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.'}
+                    {'조회 결과가 없습니다.'}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -335,7 +330,7 @@ export default function AdminUsersPage() {
         </div>
 
         <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-          <span>{`\uCD1D ${totalElements} \uAC74`}</span>
+          <span>{`총 ${totalElements} 건`}</span>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -343,7 +338,7 @@ export default function AdminUsersPage() {
               onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
               disabled={page <= 0 || isLoading}
             >
-              {'\uC774\uC804'}
+              {'이전'}
             </Button>
             <span>{`${page + 1} / ${Math.max(totalPages, 1)}`}</span>
             <Button
@@ -352,7 +347,7 @@ export default function AdminUsersPage() {
               onClick={() => setPage((prev) => (prev + 1 < totalPages ? prev + 1 : prev))}
               disabled={page + 1 >= totalPages || isLoading}
             >
-              {'\uB2E4\uC74C'}
+              {'다음'}
             </Button>
             <Select
               value={String(size)}
@@ -387,22 +382,20 @@ export default function AdminUsersPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{'\uC0C1\uD0DC \uBCC0\uACBD'}</DialogTitle>
+            <DialogTitle>{'상태 변경'}</DialogTitle>
             <DialogDescription>
-              {actionTarget
-                ? `\uC0AC\uC6A9\uC790 ${actionTarget.user.email} \uC0C1\uD0DC\uB97C \uBCC0\uACBD\uD569\uB2C8\uB2E4.`
-                : ''}
+              {actionTarget ? `사용자 ${actionTarget.user.email} 상태를 변경합니다.` : ''}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              {actionTarget ? `\uC120\uD0DD\uB41C \uC561\uC158: ${actionTarget.status}` : ''}
+              {actionTarget ? `선택된 액션: ${actionTarget.status}` : ''}
             </p>
             <Textarea
               rows={3}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              placeholder={'\uBCC0\uACBD \uC0AC\uC720 (\uC120\uD0DD)'}
+              placeholder={'변경 사유 (선택)'}
             />
           </div>
           <DialogFooter>
@@ -414,10 +407,10 @@ export default function AdminUsersPage() {
                 setReason('')
               }}
             >
-              {'\uCDE8\uC18C'}
+              {'취소'}
             </Button>
             <Button type="button" onClick={handleStatusChange} disabled={isSubmitting}>
-              {isSubmitting ? '\uCC98\uB9AC \uC911...' : '\uD655\uC778'}
+              {isSubmitting ? '처리 중...' : '확인'}
             </Button>
           </DialogFooter>
         </DialogContent>
