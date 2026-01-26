@@ -8,12 +8,17 @@ import { Label } from '@/components/ui/label'
 import { Star } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { reviewService } from '@/lib/api/services/review'
-import { uploadService } from '@/lib/api/services/upload'
+import { Input } from '@/components/ui/input'
 
 interface ReviewFormProps {
   productId?: string | number
   experienceId?: string | number
   orderItemId?: string // 주문 항목 ID (리뷰 작성에 필요)
+  mode?: 'create' | 'edit'
+  reviewId?: string
+  initialRating?: number
+  initialContent?: string
+  initialImages?: string[]
   onSubmit?: (review: { rating: number; content: string; images?: File[] }) => void
   onCancel?: () => void
 }
@@ -22,15 +27,23 @@ export function ReviewForm({
   productId,
   experienceId,
   orderItemId,
+  mode = 'create',
+  reviewId,
+  initialRating = 0,
+  initialContent = '',
+  initialImages = [],
   onSubmit,
   onCancel,
 }: ReviewFormProps) {
   const { toast } = useToast()
-  const [rating, setRating] = useState(0)
+  const [rating, setRating] = useState(initialRating)
   const [hoveredRating, setHoveredRating] = useState(0)
-  const [content, setContent] = useState('')
+  const [content, setContent] = useState(initialContent)
   const [images, setImages] = useState<File[]>([])
+  const [clearExistingImages, setClearExistingImages] = useState(false)
+  const [reviewVisibility, setReviewVisibility] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [manualOrderItemId, setManualOrderItemId] = useState(orderItemId ?? '')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,32 +69,40 @@ export function ReviewForm({
     setIsSubmitting(true)
 
     try {
-      // 이미지 업로드 (있는 경우)
-      let imageUrls: string[] = []
-      if (images.length > 0) {
-        const uploadPromises = images.map((image) => uploadService.uploadFile(image, 'review'))
-        const uploadResults = await Promise.all(uploadPromises)
-        imageUrls = uploadResults.map((result) => result.url)
-      }
-
-      // orderItemId가 없으면 에러
-      if (!orderItemId) {
-        throw new Error(
-          '주문 정보를 찾을 수 없습니다. 구매한 상품에 대해서만 리뷰를 작성할 수 있습니다.'
-        )
-      }
-
-      // 상품 리뷰 등록
-      if (productId && orderItemId) {
-        await reviewService.createProductReview(String(productId), {
-          orderItemId,
-          rating,
-          content: content.trim(),
-          reviewVisibility: 'PUBLIC', // 기본값: 공개
-        })
+      if (mode === 'create') {
+        if (productId) {
+          if (!manualOrderItemId.trim()) {
+            throw new Error('주문 항목 ID를 입력해주세요.')
+          }
+          await reviewService.createProductReview(
+            String(productId),
+            {
+              orderItemId: manualOrderItemId.trim(),
+              rating,
+              content: content.trim(),
+              reviewVisibility: reviewVisibility,
+            },
+            images
+          )
+        } else {
+          throw new Error('체험 리뷰는 아직 지원되지 않습니다.')
+        }
       } else {
-        // TODO: 체험 리뷰 등록 (experienceId가 있는 경우)
-        throw new Error('체험 리뷰는 아직 지원되지 않습니다.')
+        if (!reviewId) {
+          throw new Error('수정할 리뷰 정보를 찾을 수 없습니다.')
+        }
+        const imageUpdateMode =
+          images.length > 0 ? 'REPLACE' : clearExistingImages ? 'CLEAR' : 'KEEP'
+        await reviewService.updateReview(
+          reviewId,
+          {
+            rating,
+            content: content.trim(),
+            reviewVisibility: reviewVisibility,
+            imageUpdateMode,
+          },
+          images
+        )
       }
 
       onSubmit?.({
@@ -91,20 +112,27 @@ export function ReviewForm({
       })
 
       toast({
-        title: '리뷰가 등록되었습니다',
-        description: '소중한 후기 감사합니다.',
+        title: mode === 'create' ? '리뷰가 등록되었습니다' : '리뷰가 수정되었습니다',
+        description: mode === 'create' ? '소중한 후기 감사합니다.' : '리뷰가 업데이트되었습니다.',
       })
 
       // Reset form
-      setRating(0)
-      setContent('')
-      setImages([])
-      onCancel?.()
+      if (mode === 'create') {
+        setRating(0)
+        setContent('')
+        setImages([])
+        setClearExistingImages(false)
+        onCancel?.()
+      }
     } catch (error: any) {
       console.error('리뷰 등록 실패:', error)
       toast({
-        title: '리뷰 등록 실패',
-        description: error.message || '리뷰 등록 중 오류가 발생했습니다. 다시 시도해주세요.',
+        title: mode === 'create' ? '리뷰 등록 실패' : '리뷰 수정 실패',
+        description:
+          error.message ||
+          (mode === 'create'
+            ? '리뷰 등록 중 오류가 발생했습니다. 다시 시도해주세요.'
+            : '리뷰 수정 중 오류가 발생했습니다. 다시 시도해주세요.'),
         variant: 'destructive',
       })
     } finally {
@@ -131,8 +159,24 @@ export function ReviewForm({
 
   return (
     <Card className="p-6">
-      <h3 className="text-lg font-semibold mb-4">리뷰 작성</h3>
+      <h3 className="text-lg font-semibold mb-4">
+        {mode === 'create' ? '리뷰 작성' : '리뷰 수정'}
+      </h3>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Rating */}
+        {mode === 'create' && (
+          <div>
+            <Label htmlFor="orderItemId">주문 항목 ID</Label>
+            <Input
+              id="orderItemId"
+              value={manualOrderItemId}
+              onChange={(e) => setManualOrderItemId(e.target.value)}
+              placeholder="주문 항목 ID를 입력하세요"
+              className="mt-2"
+            />
+          </div>
+        )}
+
         {/* Rating */}
         <div>
           <Label>평점</Label>
@@ -173,7 +217,40 @@ export function ReviewForm({
           <div className="text-right text-sm text-muted-foreground mt-1">{content.length}/1000</div>
         </div>
 
-        {/* Images */}
+        {/* Existing Images */}
+        {mode === 'edit' && initialImages.length > 0 && (
+          <div>
+            <Label>기존 이미지</Label>
+            <div className="mt-2 flex gap-2 flex-wrap">
+              {initialImages.map((image, index) => (
+                <div
+                  key={`${image}-${index}`}
+                  className="relative w-24 h-24 rounded-lg overflow-hidden border"
+                >
+                  <img
+                    src={image}
+                    alt={`Existing ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 text-sm text-muted-foreground">
+              새 이미지를 추가하지 않으면 기존 이미지를 유지합니다.
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                id="clear-existing-images"
+                type="checkbox"
+                checked={clearExistingImages}
+                onChange={(e) => setClearExistingImages(e.target.checked)}
+              />
+              <Label htmlFor="clear-existing-images">기존 이미지 모두 삭제</Label>
+            </div>
+          </div>
+        )}
+
+        {/* New Images */}
         <div>
           <Label>사진 첨부 (선택사항, 최대 5개)</Label>
           <div className="mt-2 space-y-2">
@@ -210,6 +287,35 @@ export function ReviewForm({
           </div>
         </div>
 
+        {/* Visibility */}
+        <div>
+          <Label>공개 여부</Label>
+          <div className="flex items-center gap-4 mt-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="visibility"
+                value="PUBLIC"
+                checked={reviewVisibility === 'PUBLIC'}
+                onChange={(e) => setReviewVisibility(e.target.value as 'PUBLIC' | 'PRIVATE')}
+                className="w-4 h-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm">전체 공개</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="visibility"
+                value="PRIVATE"
+                checked={reviewVisibility === 'PRIVATE'}
+                onChange={(e) => setReviewVisibility(e.target.value as 'PUBLIC' | 'PRIVATE')}
+                className="w-4 h-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm">비공개</span>
+            </label>
+          </div>
+        </div>
+
         {/* Actions */}
         <div className="flex gap-2 justify-end">
           {onCancel && (
@@ -218,7 +324,13 @@ export function ReviewForm({
             </Button>
           )}
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? '등록 중...' : '리뷰 등록'}
+            {isSubmitting
+              ? mode === 'create'
+                ? '등록 중...'
+                : '수정 중...'
+              : mode === 'create'
+                ? '리뷰 등록'
+                : '리뷰 수정'}
           </Button>
         </div>
       </form>

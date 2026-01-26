@@ -19,7 +19,7 @@ import { productService } from '@/lib/api/services/product'
 import { sellerService } from '@/lib/api/services/seller'
 import { reviewService } from '@/lib/api/services/review'
 import { inventoryService } from '@/lib/api/services/inventory'
-import type { Product, Review, InventoryInfo } from '@/lib/api/types'
+import type { ProductDetailInfo, Review, InventoryInfo } from '@/lib/api/types'
 import type { SellerInfoData } from '@/lib/api/types/seller'
 import { cartService } from '@/lib/api/services/cart'
 import { useProductDetailTracking } from '@/hooks/use-product-detail-tracking'
@@ -33,9 +33,10 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
   const [mounted, setMounted] = useState(false)
-  const [product, setProduct] = useState<Product | null>(null)
+  const [product, setProduct] = useState<ProductDetailInfo | null>(null)
   const [sellerInfo, setSellerInfo] = useState<SellerInfoData | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
+  const [inventories, setInventories] = useState<InventoryInfo[]>([])
   const [inventoryId, setInventoryId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { addItem } = useCartStore()
@@ -104,13 +105,13 @@ export default function ProductDetailPage() {
       if (!productId) return
 
       try {
-        const inventories: InventoryInfo[] =
-          await inventoryService.getInventoriesByProductId(productId)
-        const available =
-          inventories.find((item) => item.quantity - item.reservedQuantity > 0) || inventories[0]
+        const list: InventoryInfo[] = await inventoryService.getInventoriesByProductId(productId)
+        const available = list.find((item) => item.quantity - item.reservedQuantity > 0) || list[0]
+        setInventories(list)
         setInventoryId(available?.inventoryId ?? null)
       } catch (error) {
         console.warn('[ProductDetail] Inventory load failed:', error)
+        setInventories([])
         setInventoryId(null)
       }
     }
@@ -119,6 +120,16 @@ export default function ProductDetailPage() {
       fetchInventory()
     }
   }, [mounted, productId])
+
+  useEffect(() => {
+    if (!inventoryId) return
+    const selected = inventories.find((item) => item.inventoryId === inventoryId)
+    if (!selected) return
+    const remaining = Math.max(0, selected.quantity - selected.reservedQuantity)
+    if (remaining > 0 && quantity > remaining) {
+      setQuantity(remaining)
+    }
+  }, [inventories, inventoryId, quantity])
 
   // 유사 상품 추천 조회 (함께 구매하면 좋은 상품)
   const { data: similarProductsData, isLoading: isSimilarProductsLoading } = useSimilarProducts(
@@ -137,7 +148,11 @@ export default function ProductDetailPage() {
         // 리뷰 데이터로 평균 평점 계산
         const averageRating =
           reviews.length > 0
-            ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+            ? Number(
+                (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(
+                  1
+                )
+              )
             : 0
 
         // Product 타입의 모든 필드를 유지하면서 UI 표시용 필드들 추가
@@ -151,7 +166,7 @@ export default function ProductDetailPage() {
           delivery: '수확 후 당일 배송', // TODO: 배송 정보 추가
 
           // computed 필드들 (별도 API에서 가져온 데이터 사용)
-          storeName: sellerInfo?.storeName || '',
+          storeName: sellerInfo?.storeName || '판매자 정보 없음',
           farmLocation: '', // 판매자 정보에서는 위치 정보가 없으므로 빈 문자열
           reviews: reviews.length,
           rating: averageRating,
@@ -181,6 +196,9 @@ export default function ProductDetailPage() {
       return
     }
 
+    const selectedInventory = inventories.find((item) => item.inventoryId === inventoryId)
+    const optionInfoJson = selectedInventory ? JSON.stringify({ unit: selectedInventory.unit }) : ''
+
     try {
       // 서버 API로 장바구니에 상품 추가
       await cartService.addItemToCart({
@@ -188,7 +206,7 @@ export default function ProductDetailPage() {
         quantity,
         unitPrice: displayProduct.price,
         inventoryId,
-        optionInfoJson: '',
+        optionInfoJson,
       })
 
       // 로컬 스토어도 업데이트 (캐시 용도)
@@ -254,6 +272,7 @@ export default function ProductDetailPage() {
       return
     }
 
+    const selectedInventory = inventories.find((item) => item.inventoryId === inventoryId)
     const buyNowData = {
       productId: String(displayProduct.id),
       sellerId: String(displayProduct.sellerId),
@@ -263,6 +282,7 @@ export default function ProductDetailPage() {
       image: displayProduct.imageUrls[0] ?? '/placeholder.svg',
       store: displayProduct.storeName || '',
       quantity,
+      unit: selectedInventory?.unit ?? null,
       timestamp: Date.now(),
     }
 
@@ -357,6 +377,9 @@ export default function ProductDetailPage() {
         product={displayProduct}
         quantity={quantity}
         selectedImage={selectedImage}
+        inventories={inventories}
+        selectedInventoryId={inventoryId}
+        onChangeInventory={setInventoryId}
         onChangeQuantity={setQuantity}
         onChangeSelectedImage={setSelectedImage}
         onAddToCart={handleAddToCart}
@@ -366,7 +389,11 @@ export default function ProductDetailPage() {
       {/* Product Description and Reviews */}
       <div className="grid lg:grid-cols-3 gap-8 mb-12">
         <div className="lg:col-span-2 space-y-8">
-          <ProductDescriptionSection description={displayProduct.description} />
+          <ProductDescriptionSection
+            imageUrls={displayProduct.imageUrls}
+            positiveReviewSummary={displayProduct.positiveReviewSummary}
+            negativeReviewSummary={displayProduct.negativeReviewSummary}
+          />
 
           <ProductReviewSection
             productId={productId}

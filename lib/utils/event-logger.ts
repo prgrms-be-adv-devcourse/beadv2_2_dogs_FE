@@ -1,7 +1,11 @@
 import fs from 'fs'
 import path from 'path'
 
-const LOG_BASE_DIR = '/mnt/s3/logs/events'
+// 로컬 개발 환경에서는 프로젝트 루트의 logs/events 디렉토리를 사용
+const LOG_BASE_DIR =
+  process.env.NODE_ENV === 'production'
+    ? '/mnt/s3/logs/events'
+    : path.join(process.cwd(), 'logs', 'events')
 
 function ensureLogDir() {
   if (!fs.existsSync(LOG_BASE_DIR)) {

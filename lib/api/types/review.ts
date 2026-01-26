@@ -2,6 +2,7 @@
 // Review Types
 // =====================
 export type ReviewVisibility = 'PUBLIC' | 'PRIVATE'
+export type ReviewStatus = 'ACTIVE' | 'DELETED' | 'HIDDEN'
 
 export interface ReviewCreateRequest {
   orderItemId: string // UUID
@@ -14,21 +15,27 @@ export interface ReviewUpdateRequest {
   rating?: number
   reviewVisibility?: ReviewVisibility
   content?: string
+  imageUpdateMode?: 'KEEP' | 'REPLACE' | 'CLEAR'
 }
 
 export interface Review {
-  id: string // UUID (reviewId)
+  id: string // UUID
   orderItemId?: string // UUID
+  buyerId?: string // UUID
+  productId?: string // UUID
+  rating: number
+  status?: ReviewStatus
+  content: string
+  reviewVisibility?: ReviewVisibility
+  imageUrls?: string[]
+  createdAt?: string
+  updatedAt?: string
+  // legacy fields (optional)
   userId?: number | string
   userName?: string
   userImage?: string
   targetType?: 'PRODUCT' | 'EXPERIENCE' | 'FARM'
   targetId?: number | string
-  productId?: string // UUID
-  rating: number
-  content: string
-  reviewVisibility?: ReviewVisibility
   images?: string[]
   helpfulCount?: number
-  createdAt?: string
 }

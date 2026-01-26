@@ -1,4 +1,4 @@
-import { experienceApi } from '../client'
+import { buyerApi, experienceApi } from '../client'
 import { s3UploadService } from './s3-upload'
 import { processImage, isImageFile } from '@/lib/utils/image-processor'
 
@@ -42,13 +42,21 @@ export const uploadService = {
   ): Promise<UploadResponse> {
     // Presigned URL 방식 (기본)
     if (!useBackendProxy) {
-      const result = await s3UploadService.uploadFile(file, type)
-      return {
-        success: result.success,
-        fileName: result.fileName,
-        url: result.url,
-        size: result.size,
-        type: result.type,
+      try {
+        const result = await s3UploadService.uploadFile(file, type)
+        return {
+          success: result.success,
+          fileName: result.fileName,
+          url: result.url,
+          size: result.size,
+          type: result.type,
+        }
+      } catch (error: unknown) {
+        const apiError = error as { status?: number }
+        if (apiError?.status !== 404) {
+          throw error
+        }
+        // Presigned URL API가 없는 경우 백엔드 프록시로 폴백
       }
     }
 
@@ -77,7 +85,8 @@ export const uploadService = {
       formData.append('type', type)
     }
 
-    const response = await experienceApi.post<UploadResponse>('/api/v1/files/upload', formData, {
+    const api = type === 'product' ? buyerApi : experienceApi
+    const response = await api.post<UploadResponse>('/api/v1/files/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -100,16 +109,24 @@ export const uploadService = {
   ): Promise<MultipleUploadResponse> {
     // Presigned URL 방식 (기본)
     if (!useBackendProxy) {
-      const result = await s3UploadService.uploadMultipleFiles(files, type)
-      return {
-        success: result.success,
-        files: result.files.map((f) => ({
-          fileName: f.fileName,
-          url: f.url,
-          size: f.size,
-          type: f.type,
-        })),
-        count: result.count,
+      try {
+        const result = await s3UploadService.uploadMultipleFiles(files, type)
+        return {
+          success: result.success,
+          files: result.files.map((f) => ({
+            fileName: f.fileName,
+            url: f.url,
+            size: f.size,
+            type: f.type,
+          })),
+          count: result.count,
+        }
+      } catch (error: unknown) {
+        const apiError = error as { status?: number }
+        if (apiError?.status !== 404) {
+          throw error
+        }
+        // Presigned URL API가 없는 경우 백엔드 프록시로 폴백
       }
     }
 
@@ -144,7 +161,8 @@ export const uploadService = {
       formData.append('type', type)
     }
 
-    const response = await experienceApi.post<MultipleUploadResponse>(
+    const api = type === 'product' ? buyerApi : experienceApi
+    const response = await api.post<MultipleUploadResponse>(
       '/api/v1/files/upload/multiple',
       formData,
       {

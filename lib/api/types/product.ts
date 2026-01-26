@@ -29,8 +29,11 @@ export interface ProductCreateRequest {
   description: string
   categoryId: string // UUID
   price: number // Long
-  stockQuantity: number // Integer
   productStatus?: 'ACTIVE' | 'INACTIVE' | 'SOLD_OUT' | 'DELETED'
+  inventoryOptions: Array<{
+    quantity: number // Long
+    unit: number // Integer
+  }>
   // imageUrls는 제거됨 - 이미지 파일은 FormData로 직접 전송
 }
 
@@ -56,11 +59,14 @@ export interface ProductDetailInfo {
   categoryCode: string | null
   categoryName: string | null
   price: number // Long
-  stockQuantity: number // Integer
   productStatus: 'ACTIVE' | 'INACTIVE' | 'SOLD_OUT' | 'DELETED'
   createdAt: string // ISO 8601
   updatedAt: string // ISO 8601
   imageUrls: string[] // 이미지 URL 배열
+  inventoryOptions: Array<{
+    quantity: number
+    unit: number
+  }>
   positiveReviewSummary: string[] // 긍정 리뷰 요약
   negativeReviewSummary: string[] // 부정 리뷰 요약
 }

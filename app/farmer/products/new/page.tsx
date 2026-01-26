@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Sprout, ArrowLeft, Save } from 'lucide-react'
+import { Sprout, ArrowLeft, Save, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import {
   DropdownMenu,
@@ -33,7 +33,6 @@ import { categoryService } from '@/lib/api/services/category'
 import { authService } from '@/lib/api/services/auth'
 import { getUserRole } from '@/lib/api/client'
 import { useToast } from '@/hooks/use-toast'
-import { uploadService } from '@/lib/api/services/upload'
 import type { ProductStatus } from '@/lib/api/types'
 import type { CategoryListItem } from '@/lib/api/types/category'
 import { ImageIcon, X } from 'lucide-react'
@@ -45,8 +44,6 @@ const STATUS_OPTIONS: { value: ProductStatus; label: string }[] = [
   { value: 'HIDDEN', label: '숨김' },
 ]
 
-const PRODUCT_CATEGORY_PARENT_ID = '1f428190-f4ff-11f0-a138-82c74923ca5d'
-
 export default function NewProductPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -57,14 +54,17 @@ export default function NewProductPage() {
     description: '',
     categoryId: '',
     price: '',
-    stockQuantity: '',
     productStatus: 'ON_SALE' as ProductStatus,
   })
+  const [inventoryOptions, setInventoryOptions] = useState<
+    Array<{ quantity: string; unit: string }>
+  >([{ quantity: '', unit: '' }])
   const [images, setImages] = useState<File[]>([])
-  const [categories, setCategories] = useState<CategoryListItem[]>([])
+  const [categoryLevels, setCategoryLevels] = useState<CategoryListItem[][]>([])
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(false)
-  const [imageUrls, setImageUrls] = useState<string[]>([])
-  const [isUploadingImages, setIsUploadingImages] = useState(false)
+  const [loadingCategoryLevel, setLoadingCategoryLevel] = useState<number | null>(null)
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
 
   // 마운트 확인 및 userRole 확인
   useEffect(() => {
@@ -77,8 +77,10 @@ export default function NewProductPage() {
     const fetchCategories = async () => {
       setIsLoadingCategories(true)
       try {
-        const data = await categoryService.getCategories(PRODUCT_CATEGORY_PARENT_ID)
-        setCategories(data)
+        const data = await categoryService.getCategories()
+        setCategoryLevels(data.length > 0 ? [data] : [])
+        setSelectedCategoryIds([])
+        setFormData((prev) => ({ ...prev, categoryId: '' }))
       } catch (error) {
         console.error('\uCE74\uD14C\uACE0\uB9AC \uC870\uD68C \uC2E4\uD328:', error)
         toast({
@@ -93,6 +95,38 @@ export default function NewProductPage() {
 
     fetchCategories()
   }, [mounted, toast])
+
+  const handleCategoryChange = async (levelIndex: number, value: string) => {
+    const nextSelected = selectedCategoryIds.slice(0, levelIndex)
+    nextSelected[levelIndex] = value
+    setSelectedCategoryIds(nextSelected)
+    setFormData((prev) => ({ ...prev, categoryId: value }))
+
+    setCategoryLevels((prev) => prev.slice(0, levelIndex + 1))
+
+    if (!value) return
+
+    const nextLevelIndex = levelIndex + 1
+    setLoadingCategoryLevel(nextLevelIndex)
+    try {
+      const children = await categoryService.getCategories(value)
+      if (children.length > 0) {
+        setCategoryLevels((prev) => [...prev, children])
+      }
+    } catch (error: unknown) {
+      const apiError = error as { status?: number }
+      if (apiError?.status !== 404) {
+        console.error('하위 카테고리 조회 실패:', error)
+        toast({
+          title: '카테고리 조회 실패',
+          description: '하위 카테고리를 불러오지 못했습니다.',
+          variant: 'destructive',
+        })
+      }
+    } finally {
+      setLoadingCategoryLevel(null)
+    }
+  }
 
   // userRole이 없으면 auth/me를 호출해서 가져오기
   useEffect(() => {
@@ -114,6 +148,20 @@ export default function NewProductPage() {
 
     ensureUserRole()
   }, [mounted])
+
+  useEffect(() => {
+    if (images.length === 0) {
+      setImagePreviews([])
+      return
+    }
+
+    const previewUrls = images.map((image) => URL.createObjectURL(image))
+    setImagePreviews(previewUrls)
+
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url))
+    }
+  }, [images])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -147,11 +195,29 @@ export default function NewProductPage() {
       return
     }
 
-    const stockQuantity = Number(formData.stockQuantity)
-    if (isNaN(stockQuantity) || stockQuantity < 0) {
+    if (inventoryOptions.length === 0) {
       toast({
         title: '입력 오류',
-        description: '올바른 재고 수량을 입력해주세요.',
+        description: '재고 옵션을 최소 1개 이상 입력해주세요.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const parsedOptions = inventoryOptions.map((option) => ({
+      quantity: Number(option.quantity),
+      unit: Number(option.unit),
+    }))
+
+    const hasInvalidOption = parsedOptions.some(
+      (option) =>
+        isNaN(option.quantity) || option.quantity < 0 || isNaN(option.unit) || option.unit <= 0
+    )
+
+    if (hasInvalidOption) {
+      toast({
+        title: '입력 오류',
+        description: '재고 옵션의 수량과 단위를 올바르게 입력해주세요.',
         variant: 'destructive',
       })
       return
@@ -159,38 +225,17 @@ export default function NewProductPage() {
 
     setIsSubmitting(true)
     try {
-      // 이미지 업로드 (있는 경우) - uploadService가 자동으로 압축 처리
-      let uploadedImageUrls: string[] = []
-      if (images.length > 0) {
-        setIsUploadingImages(true)
-        try {
-          const uploadResults = await uploadService.uploadMultipleFiles(images, 'product')
-          uploadedImageUrls = uploadResults.files.map((f) => f.url)
-          setImageUrls(uploadedImageUrls)
-        } catch (error) {
-          console.error('이미지 업로드 실패:', error)
-          toast({
-            title: '이미지 업로드 실패',
-            description: '이미지 업로드 중 오류가 발생했습니다. 다시 시도해주세요.',
-            variant: 'destructive',
-          })
-          setIsUploadingImages(false)
-          setIsSubmitting(false)
-          return
-        } finally {
-          setIsUploadingImages(false)
-        }
-      }
-
-      await productService.createProduct({
-        productName: formData.productName.trim(),
-        description: formData.description.trim() || undefined,
-        categoryId: formData.categoryId.trim(),
-        price,
-        stockQuantity,
-        productStatus: formData.productStatus,
-        imageUrls: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
-      })
+      await productService.createProduct(
+        {
+          productName: formData.productName.trim(),
+          description: formData.description.trim() || undefined,
+          categoryId: formData.categoryId.trim(),
+          price,
+          productStatus: formData.productStatus,
+          inventoryOptions: parsedOptions,
+        },
+        images.length > 0 ? images : undefined
+      )
 
       toast({
         title: '상품 등록 완료',
@@ -218,25 +263,18 @@ export default function NewProductPage() {
       {/* Header */}
       <header className="border-b bg-background sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2">
-              <Sprout className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">바로팜</span>
-            </Link>
-            <Badge variant="secondary">농가</Badge>
+          <div className="flex items-center gap-2">
+            <Sprout className="h-6 w-6 text-primary" />
+            <span className="font-semibold">BaroFarm</span>
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/">고객 페이지</Link>
-            </Button>
+            <Badge variant="outline">판매자</Badge>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Avatar>
-                    <AvatarFallback>햇</AvatarFallback>
-                  </Avatar>
-                </Button>
+              <DropdownMenuTrigger className="outline-none">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback>F</AvatarFallback>
+                </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>햇살농장</DropdownMenuLabel>
@@ -306,43 +344,63 @@ export default function NewProductPage() {
 
             {/* Category */}
             <div className="space-y-2">
-              <Label htmlFor="categoryId">
+              <Label>
                 {'\uCE74\uD14C\uACE0\uB9AC'} <span className="text-destructive">*</span>
               </Label>
-              <Select
-                value={formData.categoryId}
-                onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-                required
-              >
-                <SelectTrigger id="categoryId">
-                  <SelectValue
-                    placeholder={'\uCE74\uD14C\uACE0\uB9AC\uB97C \uC120\uD0DD\uD558\uC138\uC694'}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {isLoadingCategories ? (
-                    <SelectItem value="loading" disabled>
-                      {'\uB85C\uB529 \uC911...'}
-                    </SelectItem>
-                  ) : categories.length === 0 ? (
-                    <SelectItem value="empty" disabled>
-                      {'\uCE74\uD14C\uACE0\uB9AC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4'}
-                    </SelectItem>
-                  ) : (
-                    categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name || category.code || category.id}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              {isLoadingCategories && categoryLevels.length === 0 ? (
+                <Select disabled>
+                  <SelectTrigger>
+                    <SelectValue placeholder={'\uB85C\uB529 \uC911...'} />
+                  </SelectTrigger>
+                </Select>
+              ) : categoryLevels.length === 0 ? (
+                <Select disabled>
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={'\uCE74\uD14C\uACE0\uB9AC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4'}
+                    />
+                  </SelectTrigger>
+                </Select>
+              ) : (
+                <div className="space-y-3">
+                  {categoryLevels.map((levelCategories, levelIndex) => (
+                    <Select
+                      key={`category-level-${levelIndex}`}
+                      value={selectedCategoryIds[levelIndex] || ''}
+                      onValueChange={(value) => handleCategoryChange(levelIndex, value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={`${levelIndex + 1}\uCC28 \uCE74\uD14C\uACE0\uB9AC \uC120\uD0DD`}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {loadingCategoryLevel === levelIndex ? (
+                          <SelectItem value="loading" disabled>
+                            {'\uB85C\uB529 \uC911...'}
+                          </SelectItem>
+                        ) : levelCategories.length === 0 ? (
+                          <SelectItem value="empty" disabled>
+                            {'\uCE74\uD14C\uACE0\uB9AC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4'}
+                          </SelectItem>
+                        ) : (
+                          levelCategories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name || category.code || category.id}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 가격 */}
             <div className="space-y-2">
               <Label htmlFor="price">
-                가격 (원) <span className="text-destructive">*</span>
+                가격 <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="price"
@@ -351,26 +409,76 @@ export default function NewProductPage() {
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 min="0"
-                step="1"
+                step="100"
                 required
               />
             </div>
 
-            {/* 재고 수량 */}
+            {/* 재고 옵션 */}
             <div className="space-y-2">
-              <Label htmlFor="stockQuantity">
-                재고 수량 <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="stockQuantity"
-                type="number"
-                placeholder="예: 100"
-                value={formData.stockQuantity}
-                onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
-                min="0"
-                step="1"
-                required
-              />
+              <div className="flex items-center justify-between">
+                <Label>
+                  재고 옵션 <span className="text-destructive">*</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setInventoryOptions((prev) => [...prev, { quantity: '', unit: '' }])
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  옵션 추가
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {inventoryOptions.map((option, index) => (
+                  <div key={`option-${index}`} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <Input
+                      type="number"
+                      placeholder="재고 수량 (예: 100)"
+                      value={option.quantity}
+                      onChange={(e) =>
+                        setInventoryOptions((prev) =>
+                          prev.map((item, idx) =>
+                            idx === index ? { ...item, quantity: e.target.value } : item
+                          )
+                        )
+                      }
+                      min="0"
+                      step="1"
+                      required
+                    />
+                    <Input
+                      type="number"
+                      placeholder="단위 (예: 1)"
+                      value={option.unit}
+                      onChange={(e) =>
+                        setInventoryOptions((prev) =>
+                          prev.map((item, idx) =>
+                            idx === index ? { ...item, unit: e.target.value } : item
+                          )
+                        )
+                      }
+                      min="1"
+                      step="1"
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        setInventoryOptions((prev) => prev.filter((_, idx) => idx !== index))
+                      }
+                      disabled={inventoryOptions.length === 1}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      제거
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* 판매 상태 */}
@@ -400,27 +508,15 @@ export default function NewProductPage() {
               <Label>상품 이미지 (선택사항, 최대 10개)</Label>
               <div className="space-y-4">
                 {/* 이미지 미리보기 */}
-                {(images.length > 0 || imageUrls.length > 0) && (
+                {images.length > 0 && (
                   <div className="grid grid-cols-4 gap-4">
-                    {imageUrls.map((url, index) => (
-                      <div
-                        key={`url-${index}`}
-                        className="relative aspect-square rounded-lg overflow-hidden border"
-                      >
-                        <img
-                          src={url}
-                          alt={`상품 이미지 ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ))}
-                    {images.map((image, index) => (
+                    {imagePreviews.map((url, index) => (
                       <div
                         key={`file-${index}`}
                         className="relative aspect-square rounded-lg overflow-hidden border"
                       >
                         <img
-                          src={URL.createObjectURL(image)}
+                          src={url}
                           alt={`미리보기 ${index + 1}`}
                           className="w-full h-full object-cover"
                         />
@@ -439,7 +535,7 @@ export default function NewProductPage() {
                 )}
 
                 {/* 이미지 업로드 버튼 */}
-                {images.length + imageUrls.length < 10 && (
+                {images.length < 10 && (
                   <label className="block">
                     <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors">
                       <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
@@ -457,7 +553,7 @@ export default function NewProductPage() {
                       className="hidden"
                       onChange={(e) => {
                         const files = Array.from(e.target.files || [])
-                        if (files.length + images.length + imageUrls.length > 10) {
+                        if (files.length + images.length > 10) {
                           toast({
                             title: '이미지 개수 초과',
                             description: '최대 10개의 이미지만 업로드할 수 있습니다.',
@@ -478,13 +574,9 @@ export default function NewProductPage() {
               <Button type="button" variant="outline" asChild>
                 <Link href="/farmer/products">취소</Link>
               </Button>
-              <Button type="submit" disabled={isSubmitting || isUploadingImages}>
+              <Button type="submit" disabled={isSubmitting}>
                 <Save className="h-4 w-4 mr-2" />
-                {isUploadingImages
-                  ? '이미지 업로드 중...'
-                  : isSubmitting
-                    ? '등록 중...'
-                    : '상품 등록'}
+                {isSubmitting ? '등록 중...' : '상품 등록'}
               </Button>
             </div>
           </form>

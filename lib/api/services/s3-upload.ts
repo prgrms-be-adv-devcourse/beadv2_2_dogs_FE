@@ -1,4 +1,4 @@
-import { experienceApi } from '../client'
+import { buyerApi, experienceApi } from '../client'
 import { processImage, isImageFile } from '@/lib/utils/image-processor'
 
 /**
@@ -48,10 +48,8 @@ export const s3UploadService = {
    * @returns Presigned URL 및 파일 정보
    */
   async getPresignedUrl(request: PresignedUrlRequest): Promise<PresignedUrlResponse> {
-    const response = await experienceApi.post<PresignedUrlResponse>(
-      '/api/v1/files/presigned-url',
-      request
-    )
+    const api = request.type === 'product' ? buyerApi : experienceApi
+    const response = await api.post<PresignedUrlResponse>('/api/v1/files/presigned-url', request)
     return response
   },
 

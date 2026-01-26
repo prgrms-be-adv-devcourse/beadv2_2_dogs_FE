@@ -57,15 +57,16 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.tosspayments.com", // Next.js 및 토스페이먼츠 스크립트
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.tosspayments.com https://va.vercel-scripts.com", // Next.js 및 토스페이먼츠/분석 스크립트
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https:",
+              "img-src 'self' data: https: blob:",
               // ✅ 게이트웨이 및 모든 서비스 직접 접근 허용
               `connect-src ${connectSrcUrls}`,
 
               // ✅ 결제창/위젯 동작을 위한 frame 허용
               "frame-src 'self' https://*.tosspayments.com",
-              "child-src 'self' https://*.tosspayments.com",
+              "child-src 'self' https://*.tosspayments.com blob:",
+              "worker-src 'self' blob:",
 
               // ✅ 중복 제거하고 한 번만
               "form-action 'self' https://*.tosspayments.com",

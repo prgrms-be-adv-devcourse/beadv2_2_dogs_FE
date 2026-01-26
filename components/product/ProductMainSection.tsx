@@ -2,13 +2,21 @@
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Star, Minus, Plus, ShoppingCart, Share2, Truck, Shield, Leaf } from 'lucide-react'
+import { MapPin, Star, Minus, Plus, ShoppingCart, Share2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
-import type { Product } from '@/lib/api/types/product'
+import type { ProductDetailInfo } from '@/lib/api/types/product'
+import type { InventoryInfo } from '@/lib/api/types'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
-// DisplayProduct - UI 표시용 데이터 구조 (Product 타입과 호환)
-export interface DisplayProduct extends Product {
+// DisplayProduct - UI 표시용 데이터 구조 (상세 응답 기반)
+export interface DisplayProduct extends ProductDetailInfo {
   // UI 표시용 추가 필드들 (Product 타입에 없는 것들)
   originalPrice: number
   tag: string
@@ -26,6 +34,9 @@ interface ProductMainSectionProps {
   product: DisplayProduct
   quantity: number
   selectedImage: number
+  inventories: InventoryInfo[]
+  selectedInventoryId: string | null
+  onChangeInventory: (inventoryId: string) => void
   onChangeQuantity: (quantity: number) => void
   onChangeSelectedImage: (index: number) => void
   onAddToCart: () => void
@@ -36,11 +47,19 @@ export function ProductMainSection({
   product,
   quantity,
   selectedImage,
+  inventories,
+  selectedInventoryId,
+  onChangeInventory,
   onChangeQuantity,
   onChangeSelectedImage,
   onAddToCart,
   onBuyNow,
 }: ProductMainSectionProps) {
+  const selectedInventory = inventories.find((item) => item.inventoryId === selectedInventoryId)
+  const availableQuantity = selectedInventory
+    ? Math.max(0, selectedInventory.quantity - selectedInventory.reservedQuantity)
+    : 0
+
   return (
     <div className="grid lg:grid-cols-2 gap-8 mb-12">
       {/* Images */}
@@ -144,21 +163,39 @@ export function ProductMainSection({
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm">
-            <Shield className="h-4 w-4 text-primary" />
-            <span>{product.certification}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Truck className="h-4 w-4 text-primary" />
-            <span>{product.delivery}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Leaf className="h-4 w-4 text-primary" />
-            <span>친환경 포장재 사용</span>
-          </div>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{product.description}</p>
         </div>
 
         <div className="space-y-4">
+          {inventories.length > 0 && (
+            <div className="space-y-2">
+              <span className="text-sm font-medium">옵션 선택</span>
+              <Select
+                value={selectedInventoryId ?? undefined}
+                onValueChange={(value) => onChangeInventory(value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="옵션을 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  {inventories.map((item) => {
+                    const remaining = Math.max(0, item.quantity - item.reservedQuantity)
+                    return (
+                      <SelectItem key={item.inventoryId} value={item.inventoryId}>
+                        {item.unit}kg / 재고 {remaining}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+              {selectedInventory && (
+                <div className="text-xs text-muted-foreground">
+                  선택 옵션 재고: {availableQuantity}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium">수량</span>
             <div className="flex items-center gap-2">
@@ -166,22 +203,37 @@ export function ProductMainSection({
                 variant="outline"
                 size="icon"
                 onClick={() => onChangeQuantity(Math.max(1, quantity - 1))}
+                disabled={availableQuantity > 0 ? quantity <= 1 : false}
               >
                 <Minus className="h-4 w-4" />
               </Button>
               <span className="w-12 text-center font-medium">{quantity}</span>
-              <Button variant="outline" size="icon" onClick={() => onChangeQuantity(quantity + 1)}>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => onChangeQuantity(quantity + 1)}
+                disabled={availableQuantity > 0 ? quantity >= availableQuantity : false}
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
           <div className="flex gap-3">
-            <Button variant="outline" className="flex-1 bg-transparent" onClick={onAddToCart}>
+            <Button
+              variant="outline"
+              className="flex-1 bg-transparent"
+              onClick={onAddToCart}
+              disabled={!selectedInventoryId || availableQuantity <= 0}
+            >
               <ShoppingCart className="h-4 w-4 mr-2" />
               장바구니
             </Button>
-            <Button className="flex-1" onClick={onBuyNow}>
+            <Button
+              className="flex-1"
+              onClick={onBuyNow}
+              disabled={!selectedInventoryId || availableQuantity <= 0}
+            >
               바로 구매
             </Button>
           </div>

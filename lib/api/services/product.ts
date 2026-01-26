@@ -88,8 +88,8 @@ export const productService = {
   async createProduct(data: ProductCreateRequest, images?: File[]): Promise<ProductDetailInfo> {
     const formData = new FormData()
 
-    // JSON 데이터를 문자열로 변환하여 추가
-    formData.append('data', JSON.stringify(data))
+    // JSON 데이터를 application/json 파트로 추가
+    formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
 
     // 이미지 파일 추가 (0개 이상)
     if (images && images.length > 0) {
@@ -129,8 +129,8 @@ export const productService = {
   ): Promise<ProductDetailInfo> {
     const formData = new FormData()
 
-    // JSON 데이터를 문자열로 변환하여 추가
-    formData.append('data', JSON.stringify(data))
+    // JSON 데이터를 application/json 파트로 추가
+    formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
 
     // imageUpdateMode가 REPLACE일 때만 이미지 파일 추가
     if (data.imageUpdateMode === 'REPLACE' && images && images.length > 0) {

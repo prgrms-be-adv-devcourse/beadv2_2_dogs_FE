@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Star, ThumbsUp, Image as ImageIcon } from 'lucide-react'
+import { Star, ThumbsUp } from 'lucide-react'
 import Image from 'next/image'
 import {
   Select,
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select'
 
 export interface Review {
-  id: number
+  id: string
   author: string
   rating: number
   date: string
@@ -23,6 +23,7 @@ export interface Review {
   images?: string[]
   helpful?: number
   verified?: boolean
+  isMine?: boolean
 }
 
 interface ReviewListProps {
@@ -30,9 +31,18 @@ interface ReviewListProps {
   onLoadMore?: () => void
   hasMore?: boolean
   showFilter?: boolean
+  onEdit?: (review: Review) => void
+  onDelete?: (review: Review) => void
 }
 
-export function ReviewList({ reviews, onLoadMore, hasMore, showFilter = true }: ReviewListProps) {
+export function ReviewList({
+  reviews,
+  onLoadMore,
+  hasMore,
+  showFilter = true,
+  onEdit,
+  onDelete,
+}: ReviewListProps) {
   const [sortBy, setSortBy] = useState('recent')
   const [filterRating, setFilterRating] = useState('all')
 
@@ -56,7 +66,7 @@ export function ReviewList({ reviews, onLoadMore, hasMore, showFilter = true }: 
       }
     })
 
-  const handleHelpful = (reviewId: number) => {
+  const handleHelpful = (reviewId: string) => {
     // TODO: API 호출
     console.log('Helpful clicked for review:', reviewId)
   }
@@ -166,6 +176,16 @@ export function ReviewList({ reviews, onLoadMore, hasMore, showFilter = true }: 
                 <ThumbsUp className="h-4 w-4 mr-1" />
                 도움됨 {review.helpful || 0}
               </Button>
+              {review.isMine && (
+                <div className="ml-auto flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => onEdit?.(review)}>
+                    수정
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => onDelete?.(review)}>
+                    삭제
+                  </Button>
+                </div>
+              )}
             </div>
           </Card>
         ))}
