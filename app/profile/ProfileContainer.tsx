@@ -147,6 +147,17 @@ export function ProfileContainer() {
     checkMyFarm()
   }, [mounted, user.role])
 
+  // role에 따라 활성 탭 보정
+  useEffect(() => {
+    if (!mounted) return
+    if (user.role !== 'SELLER' && activeTab !== 'buyer') {
+      setActiveTab('buyer')
+    }
+    if (user.role === 'SELLER' && !['buyer', 'seller', 'farm'].includes(activeTab)) {
+      setActiveTab('buyer')
+    }
+  }, [mounted, user.role, activeTab])
+
   const handleSellerApplication = async () => {
     if (!sellerApplication.storeName || !sellerApplication.business_reg_no) {
       toast({

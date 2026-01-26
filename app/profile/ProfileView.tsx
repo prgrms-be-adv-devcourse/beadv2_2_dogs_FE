@@ -13,6 +13,8 @@ interface ProfileViewProps {
 }
 
 export function ProfileView({ state, actions }: ProfileViewProps) {
+  const isSeller = state.user.role === 'SELLER'
+
   // 로딩 중이거나 사용자 정보가 없으면 로딩 표시
   if (!state.mounted || state.isLoadingUser) {
     return (
@@ -41,16 +43,20 @@ export function ProfileView({ state, actions }: ProfileViewProps) {
         </div>
 
         <Tabs value={state.activeTab} onValueChange={actions.setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className={`grid w-full ${isSeller ? 'grid-cols-3' : 'grid-cols-1'}`}>
             <TabsTrigger value="buyer" className="cursor-pointer">
               구매자 대시보드
             </TabsTrigger>
-            <TabsTrigger value="seller" className="cursor-pointer">
-              판매자 대시보드
-            </TabsTrigger>
-            <TabsTrigger value="farm" className="cursor-pointer">
-              농장 대시보드
-            </TabsTrigger>
+            {isSeller && (
+              <>
+                <TabsTrigger value="seller" className="cursor-pointer">
+                  판매자 대시보드
+                </TabsTrigger>
+                <TabsTrigger value="farm" className="cursor-pointer">
+                  농장 대시보드
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
 
           {/* Buyer Dashboard Tab */}
@@ -59,14 +65,18 @@ export function ProfileView({ state, actions }: ProfileViewProps) {
           </TabsContent>
 
           {/* Seller Dashboard Tab */}
-          <TabsContent value="seller" className="space-y-6">
-            <SellerDashboard state={state} actions={actions} />
-          </TabsContent>
+          {isSeller && (
+            <TabsContent value="seller" className="space-y-6">
+              <SellerDashboard state={state} actions={actions} />
+            </TabsContent>
+          )}
 
           {/* Farm Dashboard Tab */}
-          <TabsContent value="farm" className="space-y-6">
-            <FarmDashboard state={state} actions={actions} />
-          </TabsContent>
+          {isSeller && (
+            <TabsContent value="farm" className="space-y-6">
+              <FarmDashboard state={state} actions={actions} />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

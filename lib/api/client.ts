@@ -19,41 +19,13 @@ const GATEWAY_URL = (
 ).replace(/\/$/, '')
 
 export const API_URLS = {
-  AUTH:
-    process.env.NEXT_PUBLIC_AUTH_SERVICE_URL &&
-    process.env.NEXT_PUBLIC_AUTH_SERVICE_URL.trim().length > 0
-      ? process.env.NEXT_PUBLIC_AUTH_SERVICE_URL.replace(/\/$/, '')
-      : `${GATEWAY_URL}/auth-service`,
-  BUYER:
-    process.env.NEXT_PUBLIC_BUYER_SERVICE_URL &&
-    process.env.NEXT_PUBLIC_BUYER_SERVICE_URL.trim().length > 0
-      ? process.env.NEXT_PUBLIC_BUYER_SERVICE_URL.replace(/\/$/, '')
-      : `${GATEWAY_URL}/buyer-service`,
-  SELLER:
-    process.env.NEXT_PUBLIC_SELLER_SERVICE_URL &&
-    process.env.NEXT_PUBLIC_SELLER_SERVICE_URL.trim().length > 0
-      ? process.env.NEXT_PUBLIC_SELLER_SERVICE_URL.replace(/\/$/, '')
-      : `${GATEWAY_URL}/seller-service`,
-  ORDER:
-    process.env.NEXT_PUBLIC_ORDER_SERVICE_URL &&
-    process.env.NEXT_PUBLIC_ORDER_SERVICE_URL.trim().length > 0
-      ? process.env.NEXT_PUBLIC_ORDER_SERVICE_URL.replace(/\/$/, '')
-      : `${GATEWAY_URL}/order-service`,
-  PAYMENT:
-    process.env.NEXT_PUBLIC_PAYMENT_SERVICE_URL &&
-    process.env.NEXT_PUBLIC_PAYMENT_SERVICE_URL.trim().length > 0
-      ? process.env.NEXT_PUBLIC_PAYMENT_SERVICE_URL.replace(/\/$/, '')
-      : `${GATEWAY_URL}/payment-service`,
-  AI:
-    process.env.NEXT_PUBLIC_AI_SERVICE_URL &&
-    process.env.NEXT_PUBLIC_AI_SERVICE_URL.trim().length > 0
-      ? process.env.NEXT_PUBLIC_AI_SERVICE_URL.replace(/\/$/, '')
-      : `${GATEWAY_URL}/ai-service`,
-  SUPPORT:
-    process.env.NEXT_PUBLIC_SUPPORT_SERVICE_URL &&
-    process.env.NEXT_PUBLIC_SUPPORT_SERVICE_URL.trim().length > 0
-      ? process.env.NEXT_PUBLIC_SUPPORT_SERVICE_URL.replace(/\/$/, '')
-      : `${GATEWAY_URL}/support-service`,
+  AUTH: `${GATEWAY_URL}/auth-service`,
+  BUYER: `${GATEWAY_URL}/buyer-service`,
+  SELLER: `${GATEWAY_URL}/seller-service`,
+  ORDER: `${GATEWAY_URL}/order-service`,
+  PAYMENT: `${GATEWAY_URL}/payment-service`,
+  AI: `${GATEWAY_URL}/ai-service`,
+  SUPPORT: `${GATEWAY_URL}/support-service`,
 }
 
 // ==========
@@ -69,25 +41,39 @@ export type StoredTokens = {
 }
 
 export const setAccessToken = (_token: string | null) => {
-  // [1] HttpOnly cookie 기반 인증이라 localStorage에 토큰을 저장하지 않습니다.
-  void _token
-  // [1] HttpOnly cookie로만 토큰을 사용하므로 localStorage에 저장하지 않음
+  if (typeof window === 'undefined') return
+  if (!_token) {
+    window.localStorage.removeItem('access_token')
+    return
+  }
+  window.localStorage.setItem('access_token', _token)
 }
 
 export const getAccessToken = (): string | null => {
-  // [2] HttpOnly cookie는 JS에서 읽을 수 없으므로 항상 null
-  return null
+  if (typeof window === 'undefined') return null
+  // localStorage 우선
+  const fromStorage = window.localStorage.getItem('access_token')
+  if (fromStorage) return fromStorage
+  // cookie fallback (HttpOnly가 아니면 읽힘)
+  const { accessToken } = checkCookies()
+  return accessToken
 }
 
 export const setRefreshToken = (_token: string | null) => {
-  // [3] refresh token도 HttpOnly cookie로만 관리합니다.
-  void _token
-  // [3] refresh token 역시 HttpOnly cookie로만 사용
+  if (typeof window === 'undefined') return
+  if (!_token) {
+    window.localStorage.removeItem('refresh_token')
+    return
+  }
+  window.localStorage.setItem('refresh_token', _token)
 }
 
 export const getRefreshToken = (): string | null => {
-  // [4] HttpOnly cookie는 JS에서 읽을 수 없으므로 항상 null
-  return null
+  if (typeof window === 'undefined') return null
+  const fromStorage = window.localStorage.getItem('refresh_token')
+  if (fromStorage) return fromStorage
+  const { refreshToken } = checkCookies()
+  return refreshToken
 }
 
 export const setUserId = (userId: string | null) => {
@@ -286,6 +272,7 @@ const refreshAccessTokenWithRefreshToken = async (): Promise<boolean> => {
 
 export interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>
+  skipAuthHeaders?: boolean
 }
 
 class ApiClient {
@@ -319,7 +306,7 @@ class ApiClient {
     return url.toString()
   }
 
-  private buildHeaders(options?: RequestInit): HeadersInit {
+  private buildHeaders(options?: RequestOptions): HeadersInit {
     const headers: Record<string, string> = {}
 
     // JSON 기본 헤더 (FormData인 경우 제외)
@@ -328,26 +315,37 @@ class ApiClient {
       headers['Content-Type'] = 'application/json'
     }
 
-    // Authorization 헤더
-    // [8] cookie 인증이므로 Authorization 헤더 미사용
+    const skipAuthHeaders = options?.skipAuthHeaders === true
 
-    // X-User-Id 헤더 (로그인 사용자)
-    if (typeof window !== 'undefined') {
-      const userId = getUserId()
-      if (userId) {
-        headers['X-User-Id'] = userId
-      } else {
-        // 비로그인 사용자: X-Session-Key 헤더 추가
-        const sessionKey = getOrCreateSessionKey()
-        if (sessionKey) {
-          headers['X-Session-Key'] = sessionKey
+    if (!skipAuthHeaders) {
+      // Authorization 헤더 (Gateway는 Bearer 토큰 필요)
+      if (typeof window !== 'undefined') {
+        const accessToken = getAccessToken()
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
         }
       }
+    }
 
-      // X-User-Role 헤더 (관리자/판매자 전용 API)
-      const userRole = getUserRole()
-      if (userRole) {
-        headers['X-User-Role'] = userRole
+    if (!skipAuthHeaders) {
+      // X-User-Id 헤더 (로그인 사용자)
+      if (typeof window !== 'undefined') {
+        const userId = getUserId()
+        if (userId) {
+          headers['X-User-Id'] = userId
+        } else {
+          // 비로그인 사용자: X-Session-Key 헤더 추가
+          const sessionKey = getOrCreateSessionKey()
+          if (sessionKey) {
+            headers['X-Session-Key'] = sessionKey
+          }
+        }
+
+        // X-User-Role 헤더 (관리자/판매자 전용 API)
+        const userRole = getUserRole()
+        if (userRole) {
+          headers['X-User-Role'] = userRole
+        }
       }
     }
 
@@ -426,7 +424,7 @@ class ApiClient {
       const response = await fetch(url, {
         ...fetchOptions,
         credentials: fetchOptions.credentials ?? 'include', // [11] 모든 인증 요청은 cookie 포함
-        headers: this.buildHeaders(fetchOptions),
+        headers: this.buildHeaders(fetchOptions as RequestOptions),
       })
 
       if (!response.ok) {

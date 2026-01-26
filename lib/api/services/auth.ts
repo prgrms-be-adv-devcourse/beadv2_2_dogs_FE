@@ -1,5 +1,13 @@
 // lib/api/services/auth.ts
-import { authApi, setAuthTokens, setUserRole, checkCookies, API_URLS } from '../client'
+import {
+  authApi,
+  setAuthTokens,
+  setUserRole,
+  checkCookies,
+  setAccessToken,
+  setRefreshToken,
+  API_URLS,
+} from '../client'
 import type {
   LoginRequest,
   LoginResult,
@@ -59,6 +67,14 @@ export const authService = {
           API_Origin: apiOrigin,
           주의: 'HttpOnly 쿠키는 JavaScript에서 읽을 수 없습니다.',
         })
+
+        // access_token / refresh_token이 일반 쿠키로 읽히면 localStorage에도 저장
+        if (cookieInfo.accessToken) {
+          setAccessToken(cookieInfo.accessToken)
+        }
+        if (cookieInfo.refreshToken) {
+          setRefreshToken(cookieInfo.refreshToken)
+        }
 
         // [2-1] 쿠키가 없는 경우 진단
         if (
@@ -246,7 +262,9 @@ export const authService = {
 
   // 이메일 인증 코드 발송
   async requestEmailVerification(email: string): Promise<void> {
-    return authApi.post('/api/v1/auth/verification/email/send-code', { email } as SendCodeRequest)
+    return authApi.post('/api/v1/auth/verification/email/send-code', { email } as SendCodeRequest, {
+      skipAuthHeaders: true,
+    })
   },
 
   // 이메일 인증코드 검증
@@ -256,7 +274,8 @@ export const authService = {
       {
         email,
         code,
-      } as VerifyCodeRequest
+      } as VerifyCodeRequest,
+      { skipAuthHeaders: true }
     )
     // response body가 없거나 verified 필드가 없어도 200 OK면 인증 성공으로 처리
     // (에러가 발생하면 ApiClient에서 throw되므로 여기까지 오면 성공)
